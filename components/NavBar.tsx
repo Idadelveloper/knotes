@@ -14,7 +14,7 @@ type NavBarProps = {
 export default function NavBar({ isAuthenticated = false }: NavBarProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const isAuth = isAuthenticated || (pathname?.startsWith("/home") ?? false);
+  const isAuth = isAuthenticated || pathname?.startsWith("/home") || pathname?.startsWith("/study") || false;
 
   const NavCenter = () => (
     <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-700 dark:text-[--color-accent]">

@@ -199,6 +199,7 @@ export default function HomePage() {
                 onClick={() => {
                   console.log("Start Studying clicked", { notesText });
                   setIsModalOpen(false);
+                  window.location.href = "/study";
                 }}
               >
                 Start Studying

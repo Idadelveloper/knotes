@@ -1,0 +1,820 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FaPlay, FaPause, FaStepForward, FaStepBackward, FaVolumeUp, FaSearch, FaBrain, FaGlobe, FaPenFancy, FaCopy, FaChevronDown, FaChevronRight, FaDownload, FaMagic, FaVolumeUp as FaVolume, FaCloudUploadAlt, FaMusic, FaChartBar, FaQuestionCircle, FaClock } from "react-icons/fa";
+import { HiOutlineX } from "react-icons/hi";
+
+// Simple toast system
+type Toast = { id: number; message: string };
+
+export default function StudyWorkspace() {
+  // Editor refs/state
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const savedRangeRef = useRef<Range | null>(null);
+
+  // Floating toolbar state
+  const [toolbarVisible, setToolbarVisible] = useState(false);
+  const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // AI Modal state
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiTab, setAiTab] = useState<"explain" | "summarize" | "translate" | "rewrite">("explain");
+  const [aiOutput, setAiOutput] = useState<string>("");
+
+  // Sidebar collapsibles
+  const [openPanels, setOpenPanels] = useState<{ [k: string]: boolean }>({
+    quick: true,
+    notes: true,
+    search: false,
+  });
+
+  // Music dock state
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [volume, setVolume] = useState(0.7);
+
+  // Assistant + selection state
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantTab, setAssistantTab] = useState<"explain" | "simplify" | "summarize" | "translate" | "read" | "music">("explain");
+  const [selectedText, setSelectedText] = useState("");
+
+  // Focus mode
+  const [focusMode, setFocusMode] = useState(false);
+
+  // Timer state
+  const [timerOpen, setTimerOpen] = useState(false);
+  const [timerMode, setTimerMode] = useState<"pomodoro" | "custom">("pomodoro");
+  const [customMinutes, setCustomMinutes] = useState<number>(25);
+  const [remainingSecs, setRemainingSecs] = useState<number>(0);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
+  const [showCountdown, setShowCountdown] = useState<boolean>(true);
+  const [timeUpOpen, setTimeUpOpen] = useState<boolean>(false);
+
+  // Music genre
+  const [genre, setGenre] = useState("Lo-fi");
+
+  // Assistant panel output
+  const [assistantOutput, setAssistantOutput] = useState<string>("");
+
+  // Toasts
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const pushToast = (message: string) => {
+    const id = Date.now() + Math.random();
+    setToasts((t) => [...t, { id, message }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2200);
+  };
+
+  // Track mouseup/selection in editor to toggle toolbar and open assistant
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && aiOpen) setAiOpen(false);
+    };
+    window.addEventListener("keydown", handleKey);
+
+    const handleSelectionChange = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) {
+        setToolbarVisible(false);
+        return;
+      }
+      const range = sel.getRangeAt(0);
+      if (!editor.contains(range.commonAncestorContainer)) {
+        setToolbarVisible(false);
+        return;
+      }
+      const text = sel.toString();
+      if (text.trim().length > 0) {
+        savedRangeRef.current = range.cloneRange();
+        const rect = range.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = Math.max(64, rect.top - 8); // keep under navbar
+        setToolbarPos({ x, y });
+        setToolbarVisible(true);
+        setSelectedText(text);
+        setAssistantOpen(true);
+        setAssistantTab("explain");
+      } else {
+        setToolbarVisible(false);
+      }
+    };
+
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, []);
+
+  // Hide toolbar on scroll or window resize
+  useEffect(() => {
+    const hide = () => setToolbarVisible(false);
+    window.addEventListener("scroll", hide, true);
+    window.addEventListener("resize", hide);
+    return () => {
+      window.removeEventListener("scroll", hide, true);
+      window.removeEventListener("resize", hide);
+    };
+  }, []);
+
+  // Insert text back into editor at savedRange
+  const insertIntoNotes = (text: string) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+
+    const sel = window.getSelection();
+    if (savedRangeRef.current) {
+      sel?.removeAllRanges();
+      sel?.addRange(savedRangeRef.current);
+    }
+    const range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+    if (range) {
+      range.deleteContents();
+      const node = document.createTextNode(text);
+      range.insertNode(node);
+      // move caret after inserted node
+      range.setStartAfter(node);
+      range.setEndAfter(node);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    } else {
+      // append to end if no range
+      editor.append(text);
+    }
+    pushToast("✅ Inserted into notes");
+  };
+
+  // Handle AI actions (mock)
+  const runAI = (type: "explain" | "summarize" | "translate" | "rewrite") => {
+    setAiTab(type);
+    setAiOpen(true);
+    if (type === "explain") pushToast("✨ Generating explanation…");
+    if (type === "summarize") pushToast("✨ Generating summary…");
+    if (type === "translate") pushToast("✨ Translating…");
+    if (type === "rewrite") pushToast("✨ Improving writing…");
+
+    setTimeout(() => {
+      const samples: Record<string, string> = {
+        explain: "This concept can be understood by breaking it into simpler parts and relating it to everyday examples.",
+        summarize: "In short, this section outlines the key ideas, the underlying mechanism, and their practical implications.",
+        translate: "Traducción de ejemplo: Este texto demuestra cómo podría verse una traducción al español.",
+        rewrite: "Revised: The clarity and flow of this passage have been improved for readability and impact.",
+      };
+      setAiOutput(samples[type]);
+      if (type === "summarize") pushToast("✅ Summary ready!");
+    }, 900);
+  };
+
+  // Floating toolbar action handlers
+  const handleExplain = () => {
+    setToolbarVisible(false);
+    runAI("explain");
+  };
+  const handleSimplify = () => {
+    setToolbarVisible(false);
+    runAI("rewrite");
+  };
+  const handleRead = () => {
+    if (!selectedText) return;
+    setToolbarVisible(false);
+    try {
+      // Use Web Speech API if available
+      // stop any existing
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(selectedText);
+        utter.rate = 1.0;
+        utter.pitch = 1.0;
+        window.speechSynthesis.speak(utter);
+        pushToast("🔊 Reading selection…");
+        setAiTab("explain");
+        setAiOutput("Reading aloud the selected text…");
+        setAiOpen(true);
+      } else {
+        pushToast("⚠️ TTS not supported in this browser");
+      }
+    } catch (e) {
+      pushToast("⚠️ Failed to start TTS");
+    }
+  };
+  const handleConvertMusic = () => {
+    setToolbarVisible(false);
+    pushToast("🎵 Converting selection to music prompt…");
+    setAiTab("summarize");
+    setAiOutput("We will turn your highlighted text into a mood-based soundtrack. (Demo)");
+    setAiOpen(true);
+  };
+  const handleSearch = () => {
+    setToolbarVisible(false);
+    pushToast("🌐 Searching more info…");
+    const query = selectedText.length > 120 ? selectedText.slice(0, 120) + "…" : selectedText;
+    setAiTab("summarize");
+    setAiOutput(`Top insights for: "${query}"\n\n• Definition overview\n• Related concepts\n• Further reading suggestions`);
+    setAiOpen(true);
+  };
+
+  const copyToNotes = (text: string) => {
+    insertIntoNotes("\n" + text + "\n");
+  };
+
+  // Sidebar mock content
+  const quickSummary = useMemo(() => (
+    "Key points: 1) Define the concept, 2) Show an example, 3) Connect to prior knowledge."
+  ), []);
+  const aiNotes = useMemo(() => (
+    "AI Notes: Bullet highlights, definitions, and mnemonics will appear here as you work."
+  ), []);
+  const searchResults = useMemo(() => (
+    "Search Results: Related topics and references derived from your selection."
+  ), []);
+
+  // Timer helpers
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60)
+      .toString()
+      .padStart(2, "0");
+    const s = Math.floor(secs % 60)
+      .toString()
+      .padStart(2, "0");
+    return `${m}:${s}`;
+  };
+  const startTimer = (minutes: number) => {
+    const secs = Math.max(1, Math.round(minutes * 60));
+    setRemainingSecs(secs);
+    setIsTimerRunning(true);
+  };
+
+  // Tick interval
+  useEffect(() => {
+    if (!isTimerRunning) return;
+    const id = setInterval(() => {
+      setRemainingSecs((s) => {
+        if (s <= 1) {
+          clearInterval(id);
+          setIsTimerRunning(false);
+          setTimeUpOpen(true);
+          pushToast("⏰ Time's up!");
+          try {
+            if (typeof window !== "undefined" && "navigator" in window && (window as any).navigator.vibrate) {
+              (window as any).navigator.vibrate(200);
+            }
+          } catch {}
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isTimerRunning]);
+
+  return (
+    <main className="relative w-full min-h-screen pb-36">{/* padding bottom for dock */}
+      {/* Page background */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute inset-0" style={{
+          background:
+            "radial-gradient(50% 50% at 0% 0%, rgba(139,198,236,0.35) 0%, rgba(139,198,236,0.08) 55%, rgba(139,198,236,0.03) 100%), " +
+            "radial-gradient(55% 55% at 100% 100%, rgba(179,255,171,0.35) 0%, rgba(179,255,171,0.08) 55%, rgba(179,255,171,0.02) 100%)"
+        }} />
+      </div>
+
+      {/* Header Bar */}
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 pt-16">
+        <div className="mb-6 flex items-center justify-between">
+          {/* Left: Timer control */}
+          <div className="flex items-center gap-2 text-slate-900 dark:text-[--color-accent]">
+            {isTimerRunning && showCountdown ? (
+              <button
+                onClick={() => setTimerOpen(true)}
+                className="inline-flex items-center gap-2 rounded-lg bg-white/70 ring-1 ring-red-300/60 px-3 py-1.5 shadow-sm hover:bg-white/90"
+                title="Timer running — click to adjust or stop"
+              >
+                <FaClock className="text-red-500" />
+                <span className="text-xl font-bold text-red-600 tabular-nums">{formatTime(remainingSecs)}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setTimerOpen(true)}
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2 hover:bg-blue-200"
+                title="Open timer"
+              >
+                <FaClock />
+                <span className="text-lg font-semibold">Timer</span>
+              </button>
+            )}
+          </div>
+
+          {/* Center: Actions */}
+          {!focusMode && (
+            <div className="hidden sm:flex items-center gap-3">
+              <button
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2 hover:bg-blue-200"
+                onClick={() => pushToast("📄 Upload coming soon")}
+                title="Upload your notes"
+              >
+                <FaCloudUploadAlt /> Upload Notes
+              </button>
+              <button
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2 hover:bg-blue-200"
+                onClick={() => pushToast("🎵 Generating study music…")}
+                title="Generate Study Music"
+              >
+                <FaMusic /> Generate Study Music
+              </button>
+              <button
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2 hover:bg-blue-200"
+                onClick={() => pushToast("📝 Generating quiz…")}
+                title="Generate Quiz"
+              >
+                <FaQuestionCircle /> Generate Quiz
+              </button>
+            </div>
+          )}
+
+          {/* Right: Focus Mode toggle */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-slate-700 dark:text-slate-300">Focus Mode</span>
+            <button
+              aria-pressed={focusMode}
+              onClick={() => setFocusMode(v => !v)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${focusMode ? 'bg-blue-500' : 'bg-slate-300'} ring-1 ring-black/10 dark:ring-white/10`}
+              title="Hide menus and darken UI"
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${focusMode ? 'translate-x-5' : 'translate-x-1'}`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Center actions on mobile */}
+        {!focusMode && (
+          <div className="sm:hidden flex items-center justify-center gap-3 mb-4">
+            <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => pushToast('📄 Upload coming soon')}>
+              <FaCloudUploadAlt /> Upload Notes
+            </button>
+            <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => pushToast('🎵 Generating study music…')}>
+              <FaMusic /> Generate Study Music
+            </button>
+            <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => pushToast('📝 Generating quiz…')}>
+              <FaQuestionCircle /> Generate Quiz
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Focus mode dim overlay */}
+      {focusMode && (
+        <div aria-hidden className="pointer-events-none fixed inset-0 z-10 bg-black/40 transition-opacity" />
+      )}
+
+      {/* AI Popup Mini-Toolbar (appears on selection) */}
+      {toolbarVisible && (
+        <div
+          role="toolbar"
+          aria-label="AI popup actions"
+          className="fixed z-50 -translate-x-1/2 -translate-y-full rounded-xl backdrop-blur-md bg-white/80 dark:bg-white/10 border border-black/10 dark:border-white/10 shadow-lg px-2 py-1 flex items-center gap-1"
+          style={{ left: `${toolbarPos.x}px`, top: `${toolbarPos.y}px` }}
+        >
+          <button
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-slate-800 dark:text-[--color-accent] hover:bg-black/5 dark:hover:bg-white/10 text-xs"
+            title="Explain"
+            onClick={handleExplain}
+          >
+            <FaBrain /> <span className="hidden sm:inline">Explain</span>
+          </button>
+          <button
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-slate-800 dark:text-[--color-accent] hover:bg-black/5 dark:hover:bg-white/10 text-xs"
+            title="Simplify"
+            onClick={handleSimplify}
+          >
+            <FaPenFancy /> <span className="hidden sm:inline">Simplify</span>
+          </button>
+          <button
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-slate-800 dark:text-[--color-accent] hover:bg-black/5 dark:hover:bg-white/10 text-xs"
+            title="Read"
+            onClick={handleRead}
+          >
+            <FaVolume /> <span className="hidden sm:inline">Read</span>
+          </button>
+          <button
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-slate-800 dark:text-[--color-accent] hover:bg-black/5 dark:hover:bg-white/10 text-xs"
+            title="Convert to Music"
+            onClick={handleConvertMusic}
+          >
+            <FaMusic /> <span className="hidden sm:inline">Music</span>
+          </button>
+          <button
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-slate-800 dark:text-[--color-accent] hover:bg-black/5 dark:hover:bg-white/10 text-xs"
+            title="Search More Info"
+            onClick={handleSearch}
+          >
+            <FaSearch /> <span className="hidden sm:inline">Search</span>
+          </button>
+        </div>
+      )}
+
+      {/* Main card with two-column grid */}
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 pb-6">
+        <div className="bg-white rounded-2xl shadow-lg p-8 ring-1 ring-black/5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Notes Editor (2 cols) */}
+            <section className="lg:col-span-2">
+              <h2 className="text-xl font-semibold mb-4 text-slate-900">My Notes</h2>
+              <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                className="min-h-[500px] rounded-xl border border-gray-200 p-4 leading-7 text-slate-900 outline-none focus:ring-2 focus:ring-primary"
+                onInput={() => {}}
+              >
+                <p><strong>The Mitochondrion: Powerhouse of the Cell</strong> — <span className="bg-blue-200/50">Mitochondria generate ATP through cellular respiration</span>, providing energy needed for cellular processes.</p>
+                <p className="mt-3">They have a double membrane, their own DNA, and play roles in apoptosis and calcium storage.</p>
+                <p className="mt-3">In some organisms, organelles and pathways can be highly reduced or even lost due to parasitic or anaerobic lifestyles.</p>
+                <p className="mt-6 text-gray-400 select-none">Paste your notes here to get started...</p>
+              </div>
+            </section>
+
+            {/* AI Assistant (1 col) */}
+            <aside className="lg:col-span-1">
+              <h3 className="sr-only">AI Assistant</h3>
+              {/* Tabs */}
+              <div className="flex gap-4 border-b border-gray-200 text-sm font-medium">
+                {([
+                  { key: 'explain', label: 'Explain' },
+                  { key: 'simplify', label: 'Simplify' },
+                  { key: 'summarize', label: 'Summarize' },
+                  { key: 'translate', label: 'Translate' },
+                  { key: 'read', label: 'Read Aloud' },
+                ] as const).map(t => (
+                  <button
+                    key={t.key}
+                    className={`pb-2 -mb-px border-b-2 ${assistantTab === t.key ? 'border-blue-500 text-blue-500' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                    onClick={() => setAssistantTab(t.key as typeof assistantTab)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Content Panel */}
+              <div className="mt-4 text-sm text-slate-800">
+                {selectedText.trim().length === 0 ? (
+                  <p className="text-gray-600">The AI Assistant is ready. Highlight text in your notes to see an explanation appear here.</p>
+                ) : (
+                  <div>
+                    <h4 className="font-semibold mb-2">Explanation of Highlighted Text</h4>
+                    <p className="mb-3">This passage describes how mitochondria act as energy centers of the cell by producing ATP through respiration. The highlighted portion emphasizes their key role in powering cellular activities.</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li><strong>Microsporidia</strong>: Highly reduced parasites that have minimalistic organelles due to their intracellular lifestyle.</li>
+                      <li><strong>Monocercomonoides</strong>: An organism reported to lack conventional mitochondria, relying on alternative biochemical pathways.</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Music Dock */}
+      <MusicDock
+        isPlaying={isPlaying}
+        volume={volume}
+        genre={genre}
+        onPlayPause={() => setIsPlaying((p) => !p)}
+        onPrev={() => pushToast("⏮️ Replaying previous")}
+        onNext={() => pushToast("⏭️ Skipping to next")}
+        onVolume={(v) => setVolume(v)}
+        onGenre={(g) => setGenre(g)}
+        onRegen={() => pushToast(`✨ Regenerating ${genre} soundtrack…`)}
+        onDownload={() => pushToast("⬇️ Download started")}
+        onConvert={() => pushToast(`🎼 Converting notes to ${genre} track…`)}
+      />
+
+      {/* Timer Settings Modal */}
+      {timerOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) setTimerOpen(false); }}
+        >
+          <div className="absolute inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm" />
+          <div className="relative z-10 w-full max-w-md rounded-2xl bg-accent/95 dark:bg-[--color-dark-bg]/95 ring-1 ring-black/10 dark:ring-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.25)]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-black/10 dark:border-white/10">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent]">Timer</h3>
+              <button
+                aria-label="Close"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-black/10 dark:ring-white/10 bg-white/70 dark:bg-white/5 text-slate-700 dark:text-[--color-accent] hover:bg-white/80"
+                onClick={() => setTimerOpen(false)}
+              >
+                <HiOutlineX size={18} />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-4 text-slate-800 dark:text-slate-200">
+              <div className="flex gap-2">
+                <button
+                  className={`flex-1 rounded-lg px-3 py-2 ring-1 ${timerMode === 'pomodoro' ? 'bg-primary text-slate-900 ring-primary/50' : 'bg-white/70 dark:bg-white/5 ring-black/10 dark:ring-white/10'}`}
+                  onClick={() => setTimerMode('pomodoro')}
+                >
+                  Pomodoro (25 min)
+                </button>
+                <button
+                  className={`flex-1 rounded-lg px-3 py-2 ring-1 ${timerMode === 'custom' ? 'bg-primary text-slate-900 ring-primary/50' : 'bg-white/70 dark:bg-white/5 ring-black/10 dark:ring-white/10'}`}
+                  onClick={() => setTimerMode('custom')}
+                >
+                  Custom
+                </button>
+              </div>
+
+              {timerMode === 'custom' && (
+                <div className="flex items-center gap-3">
+                  <label htmlFor="minutes" className="text-sm text-slate-600 dark:text-slate-300">Minutes</label>
+                  <input
+                    id="minutes"
+                    type="number"
+                    min={1}
+                    max={180}
+                    value={customMinutes}
+                    onChange={(e) => setCustomMinutes(Math.max(1, Math.min(180, Number(e.target.value) || 0)))}
+                    className="w-24 rounded-lg bg-white/80 dark:bg-white/5 ring-1 ring-black/10 dark:ring-white/10 p-2 text-slate-900 dark:text-[--color-accent]"
+                  />
+                </div>
+              )}
+
+              <label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={showCountdown}
+                  onChange={(e) => setShowCountdown(e.target.checked)}
+                />
+                Show countdown in header
+              </label>
+
+              <div className="flex items-center justify-between pt-2">
+                <div className="text-sm text-slate-600 dark:text-slate-300">
+                  {isTimerRunning ? (
+                    <>Remaining: <span className="font-semibold text-red-600">{formatTime(remainingSecs)}</span></>
+                  ) : (
+                    <>Not running</>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {isTimerRunning ? (
+                    <>
+                      <button
+                        className="rounded-lg px-4 py-2 ring-1 ring-black/10 dark:ring-white/10 bg-white/70 dark:bg-white/5 hover:bg-white/90"
+                        onClick={() => { setIsTimerRunning(false); setRemainingSecs(0); }}
+                      >
+                        Stop
+                      </button>
+                      <button
+                        className="rounded-lg px-4 py-2 bg-primary text-slate-900 font-medium"
+                        onClick={() => { setRemainingSecs((timerMode === 'pomodoro' ? 25 : customMinutes) * 60); setIsTimerRunning(true); }}
+                      >
+                        Restart
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className="rounded-lg px-4 py-2 bg-primary text-slate-900 font-medium"
+                      onClick={() => {
+                        const mins = timerMode === 'pomodoro' ? 25 : customMinutes;
+                        startTimer(mins);
+                        setTimerOpen(false);
+                      }}
+                    >
+                      Start
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Time Up Modal */}
+      {timeUpOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="alertdialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm" onClick={() => setTimeUpOpen(false)} />
+          <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white ring-1 ring-black/10 shadow-xl p-6 text-center">
+            <h4 className="text-xl font-semibold text-slate-900 mb-2">Time's up!</h4>
+            <p className="text-slate-700 mb-4">Great job. Take a short break and resume when ready.</p>
+            <button className="rounded-full bg-primary px-6 py-2 text-slate-900 font-medium" onClick={() => setTimeUpOpen(false)}>OK</button>
+          </div>
+        </div>
+      )}
+
+      {/* AI Assistant Modal */}
+      {aiOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) setAiOpen(false); }}
+        >
+          <div className="absolute inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm" />
+          <div className="relative z-10 w-full max-w-2xl rounded-3xl bg-accent/95 dark:bg-[--color-dark-bg]/95 ring-1 ring-black/10 dark:ring-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.25)]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-black/10 dark:border-white/10 gap-3">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent]">AI Assistant</h3>
+              <div className="inline-flex rounded-full bg-white/50 dark:bg-white/10 p-1">
+                <TabBtn active={aiTab === "explain"} onClick={() => setAiTab("explain")}>
+                  Explain
+                </TabBtn>
+                <TabBtn active={aiTab === "summarize"} onClick={() => setAiTab("summarize")}>
+                  Summarize
+                </TabBtn>
+                <TabBtn active={aiTab === "translate"} onClick={() => setAiTab("translate")}>
+                  Translate
+                </TabBtn>
+                <TabBtn active={aiTab === "rewrite"} onClick={() => setAiTab("rewrite")}>
+                  Rewrite
+                </TabBtn>
+              </div>
+              <button
+                aria-label="Close"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-black/10 dark:ring-white/10 bg-white/70 dark:bg-white/5 text-slate-700 dark:text-[--color-accent] hover:bg-white/80"
+                onClick={() => setAiOpen(false)}
+              >
+                <HiOutlineX size={18} />
+              </button>
+            </div>
+            <div className="px-6 py-5 max-h-[45vh] overflow-auto text-slate-900 dark:text-slate-100">
+              <p className="whitespace-pre-wrap leading-7">{aiOutput || "AI is ready. Choose a tab or run an action from the toolbar."}</p>
+            </div>
+            <div className="px-6 pb-6">
+              <button
+                className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-secondary px-6 py-3 text-slate-900 font-medium shadow-[0_6px_0_rgba(0,0,0,0.08)] hover:shadow-[0_8px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px"
+                title="Add this explanation directly into your notes."
+                onClick={() => insertIntoNotes("\n" + (aiOutput || "(No output)") + "\n")}
+              >
+                <FaCopy /> Insert Back into Notes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toasts */}
+      <div className="fixed bottom-24 right-4 z-50 space-y-2">
+        {toasts.map((t) => (
+          <div key={t.id} className="rounded-xl bg-slate-900/90 text-white px-3 py-2 text-sm shadow-lg ring-1 ring-black/20">
+            {t.message}
+          </div>
+        ))}
+      </div>
+    </main>
+  );
+}
+
+function ToolBtn({ children, title, onClick }: { children: React.ReactNode; title: string; onClick: () => void }) {
+  return (
+    <button
+      className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-[--color-accent] hover:bg-black/5 dark:hover:bg-white/10"
+      title={title}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Panel({ title, open, onToggle, onCopy, children }: {
+  title: string;
+  open: boolean;
+  onToggle: () => void;
+  onCopy: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mb-3 rounded-2xl ring-1 ring-black/5 dark:ring-white/10 bg-white/80 dark:bg-white/5">
+      <div className="flex items-center justify-between px-4 py-3">
+        <button className="inline-flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-[--color-accent]" onClick={onToggle}>
+          {open ? <FaChevronDown /> : <FaChevronRight />} {title}
+        </button>
+        <button className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs text-primary ring-1 ring-primary/40 hover:bg-primary/10" onClick={onCopy}>
+          <FaCopy /> Copy to Notes
+        </button>
+      </div>
+      {open && (
+        <div className="px-4 pb-4">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MusicDock({
+  isPlaying,
+  volume,
+  genre,
+  onPlayPause,
+  onPrev,
+  onNext,
+  onVolume,
+  onGenre,
+  onRegen,
+  onDownload,
+  onConvert,
+}: {
+  isPlaying: boolean;
+  volume: number;
+  genre: string;
+  onPlayPause: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  onVolume: (v: number) => void;
+  onGenre: (g: string) => void;
+  onRegen: () => void;
+  onDownload: () => void;
+  onConvert: () => void;
+}) {
+  return (
+    <div className="fixed bottom-4 inset-x-4 z-40">
+      <div className="mx-auto w-full max-w-7xl">
+        <div className="backdrop-blur-md bg-white/70 border border-gray-200/50 rounded-lg shadow-md p-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {/* Left: Album + Info */}
+            <div className="flex items-center gap-3 min-w-[220px]">
+              <img src="/images/logo.png" alt="Album art" className="h-12 w-12 rounded-md object-cover ring-1 ring-black/10" />
+              <div>
+                <div className="font-medium text-slate-900">Lo-fi Focus Beats</div>
+                <div className="text-sm text-gray-600">AI Generated</div>
+              </div>
+            </div>
+
+            {/* Center: Controls + Visualizer */}
+            <div className="flex-1 flex flex-col items-center gap-2">
+              <div className="flex items-center gap-3">
+                <button className="h-10 w-10 inline-flex items-center justify-center rounded-full ring-1 ring-black/10 hover:bg-black/5" onClick={onPrev} aria-label="Replay">
+                  <FaStepBackward />
+                </button>
+                <button className="h-12 w-12 inline-flex items-center justify-center rounded-full bg-primary text-slate-900 shadow" onClick={onPlayPause} aria-label={isPlaying ? 'Pause' : 'Play'}>
+                  {isPlaying ? <FaPause /> : <FaPlay />}
+                </button>
+                <button className="h-10 w-10 inline-flex items-center justify-center rounded-full ring-1 ring-black/10 hover:bg-black/5" onClick={onNext} aria-label="Skip">
+                  <FaStepForward />
+                </button>
+                {/* Volume */}
+                <div className="ml-2 hidden sm:flex items-center gap-2 text-slate-700">
+                  <FaVolumeUp />
+                  <input type="range" min={0} max={1} step={0.01} value={volume} onChange={(e) => onVolume(parseFloat(e.target.value))} className="accent-primary" />
+                </div>
+              </div>
+              <div className="relative h-10 w-full max-w-xl">
+                <div className="absolute inset-0 flex items-end gap-1 overflow-hidden">
+                  {new Array(40).fill(0).map((_, i) => (
+                    <span
+                      key={i}
+                      className="w-1 rounded-t bg-primary/70 animate-[wave_1.6s_ease-in-out_infinite]"
+                      style={{ height: `${Math.max(2, (i % 7) * 4 + 6)}px`, animationDelay: `${(i % 10) * 0.08}s` }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Genre + Actions */}
+            <div className="flex flex-col items-stretch md:items-end gap-2 min-w-[280px]">
+              <div className="flex flex-wrap items-center gap-2 justify-end">
+                <FaChartBar className="text-slate-700" />
+                <select
+                  id="genre"
+                  className="rounded-lg px-3 py-2 text-sm bg-white/70 ring-1 ring-black/10 text-slate-800"
+                  value={genre}
+                  onChange={(e) => onGenre(e.target.value)}
+                >
+                  {['Lo-fi','Classical','Jazz','Nature','Chill Piano','Ambient'].map(g => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+                <button className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm bg-blue-500 text-white" onClick={onConvert} title="Convert your notes into music">
+                  Convert...
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* keyframes for visualizer */}
+      <style>{`@keyframes wave { 0%, 100% { transform: scaleY(0.6); } 50% { transform: scaleY(1.4); } }`}</style>
+    </div>
+  );
+}
+
+function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      className={`px-3 py-1 rounded-full text-sm ${active ? "bg-primary text-slate-900" : "text-slate-700 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-white/10"}`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
