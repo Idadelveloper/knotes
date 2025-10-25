@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { FaUserCircle } from "react-icons/fa";
 import { HiOutlineMenu, HiOutlineX } from "react-icons/hi";
 
@@ -12,6 +13,8 @@ type NavBarProps = {
 
 export default function NavBar({ isAuthenticated = false }: NavBarProps) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const isAuth = isAuthenticated || (pathname?.startsWith("/home") ?? false);
 
   const NavCenter = () => (
     <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-700 dark:text-[--color-accent]">
@@ -40,13 +43,13 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
         </Link>
 
         {/* Center (desktop only when authenticated) */}
-        {isAuthenticated ? <NavCenter /> : <div className="hidden md:block" />}
+        {isAuth ? <NavCenter /> : <div className="hidden md:block" />}
 
         {/* Right actions */}
         <div className="flex items-center gap-3">
           {/* Desktop actions */}
           <div className="hidden md:flex items-center gap-3">
-            {isAuthenticated ? (
+            {isAuth ? (
               <Link
                 href="#"
                 className="inline-flex items-center gap-2 rounded-xl bg-secondary/70 px-3 py-2 text-slate-900 shadow-[0_3px_0_rgba(0,0,0,0.06)] hover:shadow-[0_4px_0_rgba(0,0,0,0.08)] hover:brightness-105 active:translate-y-px active:shadow-[0_2px_0_rgba(0,0,0,0.1)]"
@@ -56,7 +59,7 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
               </Link>
             ) : (
               <Link
-                href="#"
+                href="/home"
                 className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-slate-900 font-medium shadow-[0_4px_0_rgba(0,0,0,0.08)] transition hover:shadow-[0_6px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px active:shadow-[0_3px_0_rgba(0,0,0,0.1)]"
               >
                 Login
@@ -79,7 +82,7 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
       {open && (
         <div className="md:hidden border-t border-black/5 dark:border-white/10 bg-accent/90 dark:bg-[--color-dark-bg]/80 backdrop-blur">
           <div className="mx-auto max-w-5xl px-4 sm:px-6 py-3">
-            {isAuthenticated ? (
+            {isAuth ? (
               <div className="flex flex-col gap-2">
                 <Link href="#" className="py-2 text-slate-800 dark:text-[--color-accent]">Study</Link>
                 <Link href="#" className="py-2 text-slate-800 dark:text-[--color-accent]">Music</Link>
@@ -96,7 +99,7 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
               <div className="flex items-center justify-between py-2">
                 <span className="text-slate-700 dark:text-[--color-accent] font-medium">Welcome</span>
                 <Link
-                  href="#"
+                  href="/home"
                   className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-slate-900 font-medium shadow-[0_4px_0_rgba(0,0,0,0.08)]"
                 >
                   Login
