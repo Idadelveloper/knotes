@@ -22,12 +22,12 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
   );
 
   return (
-    <header className="sticky top-0 z-40 w-full backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-black/30 border-b border-black/5 dark:border-white/10">
+    <header className="sticky top-0 z-40 w-full bg-accent/95 dark:bg-[--color-dark-bg]/95 border-b border-black/5 dark:border-white/10 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-4 sm:px-6">
         {/* Left: Logo */}
         <Link href="/" className="flex items-center gap-2">
           <Image
-            src="/images/log.png"
+            src="/images/logo.png"
             alt="Knotes logo"
             width={32}
             height={32}

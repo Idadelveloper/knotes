@@ -15,21 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark:[color-scheme:dark] [color-scheme:light]">
-      <body className="antialiased font-sans text-slate-900 bg-accent dark:bg-[--color-dark-bg] dark:text-[--color-accent] min-h-screen relative">
-        {/* Decorative calm gradient background */}
-        <div
-          aria-hidden
-          className="pointer-events-none fixed inset-0 -z-10"
-        >
-          <div
-            className="absolute -inset-32 opacity-60 blur-3xl"
-            style={{
-              background:
-                "radial-gradient(40% 40% at 20% 20%, rgba(139,198,236,0.45) 0%, rgba(139,198,236,0.05) 100%), radial-gradient(35% 35% at 80% 30%, rgba(179,255,171,0.45) 0%, rgba(179,255,171,0.05) 100%)",
-              animation: "subtleShift 16s ease-in-out infinite",
-            }}
-          />
-        </div>
+      <body className="antialiased font-sans text-slate-900 bg-accent dark:bg-[--color-dark-bg] dark:text-[--color-accent] min-h-screen">
         <NavBar isAuthenticated={false} />
         {children}
       </body>
