@@ -16,7 +16,7 @@ export default function Footer() {
           </Link>
           <span className="text-slate-400 dark:text-slate-500 select-none">|</span>
           <Link href="#" className="hover:text-slate-900 dark:hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 rounded px-1">
-            About StudyBeats
+            About Knotes
           </Link>
           <span className="text-slate-400 dark:text-slate-500 select-none">|</span>
           <a href="mailto:hello@knotes.app" className="hover:text-slate-900 dark:hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 rounded px-1">
