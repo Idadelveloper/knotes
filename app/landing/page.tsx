@@ -5,7 +5,7 @@ export default function Landing() {
   return (
     <main className="relative w-full min-h-screen overflow-hidden">
       {/* Decorative background gradients */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
         <div
           className="absolute inset-0"
           style={{
