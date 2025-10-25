@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import NavBar from "../components/NavBar";
+import Footer from "../components/Footer";
 
 export const metadata: Metadata = {
   title: "Knotes — Focused AI study space",
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body className="antialiased font-sans text-slate-900 bg-accent dark:bg-[--color-dark-bg] dark:text-[--color-accent] min-h-screen">
         <NavBar isAuthenticated={false} />
         {children}
+        <Footer />
       </body>
     </html>
   );
