@@ -3,12 +3,12 @@ import type { MetadataRoute } from 'next'
 export default function manifest(): MetadataRoute.Manifest {
     return {
         name: 'Knotes',
-        short_name: 'NextPWA',
+        short_name: 'Knotes',
         description: 'A clever fusion of study notes and music notes. Get AI-powered explanations, focus music, and turn your learning into rhythm.',
         start_url: '/',
         display: 'standalone',
-        // background_color: '#ffffff',
-        // theme_color: '#000000',
+        background_color: '#F5F8FB',
+        theme_color: '#A5D8FF',
         icons: [
             {
                 src: '/icon-192x192.png',
