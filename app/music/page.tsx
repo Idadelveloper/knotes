@@ -64,7 +64,7 @@ export default function MusicPage() {
   const allSelected = topics.length > 0 && selectedTopics.size === topics.length;
 
   // Generator controls
-  const [genre, setGenre] = useState<(typeof GENRES)[number]>("Lo-Fi");
+  const [genre, setGenre] = useState<(typeof GENRES)[number]>("Lo-Fi Chill");
   const [mood, setMood] = useState<(typeof MOODS)[number]>("Calm");
   const [tempo, setTempo] = useState<number>(75); // 40-180 typical range, we show 40-120 normalized
   const [energy, setEnergy] = useState<Energy>("Low");

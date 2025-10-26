@@ -19,6 +19,7 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
     pathname?.startsWith("/home") ||
     pathname?.startsWith("/study") ||
     pathname?.startsWith("/music") ||
+    pathname?.startsWith("/settings") ||
     false;
 
   const NavCenter = () => (
@@ -56,7 +57,7 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
           <div className="hidden md:flex items-center gap-3">
             {isAuth ? (
               <Link
-                href="#"
+                href="/settings"
                 className="inline-flex items-center gap-2 rounded-xl bg-secondary/70 px-3 py-2 text-slate-900 shadow-[0_3px_0_rgba(0,0,0,0.06)] hover:shadow-[0_4px_0_rgba(0,0,0,0.08)] hover:brightness-105 active:translate-y-px active:shadow-[0_2px_0_rgba(0,0,0,0.1)]"
               >
                 <FaUserCircle className="text-slate-700" />
@@ -93,9 +94,9 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
                 <Link href="#" className="py-2 text-slate-800 dark:text-[--color-accent]">Music</Link>
                 <Link href="#" className="py-2 text-slate-800 dark:text-[--color-accent]">History</Link>
                 <Link
-                  href="#"
-                  className="mt-2 inline-flex w-max items-center gap-2 rounded-xl bg-secondary/70 px-3 py-2 text-slate-900 shadow-[0_3px_0_rgba(0,0,0,0.06)]"
-                >
+                href="/settings"
+                className="mt-2 inline-flex w-max items-center gap-2 rounded-xl bg-secondary/70 px-3 py-2 text-slate-900 shadow-[0_3px_0_rgba(0,0,0,0.06)]"
+              >
                   <FaUserCircle className="text-slate-700" />
                   <span className="font-medium">Profile</span>
                 </Link>
