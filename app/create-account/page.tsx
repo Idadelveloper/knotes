@@ -1,12 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { FaUser, FaEnvelope, FaLock } from "react-icons/fa";
 import { createUserWithEmailAndPassword, updateProfile, getAuth } from "firebase/auth";
 import { app } from "@/lib/firebase";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function CreateAccountPage() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,6 +20,13 @@ export default function CreateAccountPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // If already authenticated, redirect to /home
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace("/home");
+    }
+  }, [loading, user, router]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();

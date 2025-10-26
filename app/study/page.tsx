@@ -67,6 +67,26 @@ export default function StudyWorkspace() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2200);
   };
 
+  // Load extracted or pasted text from the Home modal on first mount
+  useEffect(() => {
+    const key = "knotes_extracted_text";
+    const text = typeof window !== "undefined" ? sessionStorage.getItem(key) : null;
+    try {
+      if (text) {
+        console.log("[Study] Loaded extracted text from sessionStorage:", text.slice(0, 500), text.length > 500 ? `... (${text.length} chars total)` : "");
+      } else {
+        console.log("[Study] No extracted text found in sessionStorage.");
+      }
+    } catch {}
+    if (text && editorRef.current) {
+      editorRef.current.innerText = text;
+      sessionStorage.removeItem(key);
+      try {
+        console.log("[Study] Injected extracted text into editor.");
+      } catch {}
+    }
+  }, []);
+
   // Track mouseup/selection in editor to toggle toolbar and open assistant
   useEffect(() => {
     const editor = editorRef.current;

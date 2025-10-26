@@ -3,12 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { FaCloudUploadAlt, FaInfoCircle, FaClock } from "react-icons/fa";
 import { HiOutlineX } from "react-icons/hi";
+import { extractTextFromFile } from "@/lib/ai";
 
 export default function HomePage() {
   // UI state
   const [isDragging, setIsDragging] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [notesText, setNotesText] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // File input ref
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -17,12 +20,24 @@ export default function HomePage() {
   const [sessions] = useState<Array<{ id: string; title: string; date: string }>>([]);
 
   // Drag & drop handlers (modal dropzone)
-  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const onDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
+    setUploadError(null);
     const files = e.dataTransfer.files;
     if (files && files.length) {
-      console.log("Dropped files", files);
+      try {
+        setUploading(true);
+        const text = await extractTextFromFile(files[0]);
+        sessionStorage.setItem("knotes_extracted_text", text);
+        setIsModalOpen(false);
+        window.location.href = "/study";
+      } catch (err: any) {
+        console.error(err);
+        setUploadError(err?.message || "Failed to analyze the document.");
+      } finally {
+        setUploading(false);
+      }
     }
   };
 
@@ -135,6 +150,9 @@ export default function HomePage() {
 
             {/* Body: two vertical sections */}
             <div className="px-6 py-5 space-y-4">
+              {uploadError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">{uploadError}</div>
+              )}
               {/* Drag & drop upload */}
               <div
                 className={`group relative rounded-2xl bg-white/80 dark:bg-white/5 p-5 ring-1 ring-black/10 dark:ring-white/10 text-center transition ${
@@ -164,10 +182,22 @@ export default function HomePage() {
                     type="file"
                     accept=".txt,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
                     className="hidden"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const files = e.target.files;
                       if (files && files.length) {
-                        console.log("Selected files", files);
+                        setUploadError(null);
+                        try {
+                          setUploading(true);
+                          const text = await extractTextFromFile(files[0]);
+                          sessionStorage.setItem("knotes_extracted_text", text);
+                          setIsModalOpen(false);
+                          window.location.href = "/study";
+                        } catch (err: any) {
+                          console.error(err);
+                          setUploadError(err?.message || "Failed to analyze the document.");
+                        } finally {
+                          setUploading(false);
+                        }
                       }
                     }}
                   />
@@ -195,14 +225,21 @@ export default function HomePage() {
             {/* Footer actions */}
             <div className="px-6 pb-6">
               <button
-                className="w-full inline-flex items-center justify-center rounded-full bg-secondary px-6 py-3 text-slate-900 font-medium shadow-[0_6px_0_rgba(0,0,0,0.08)] hover:shadow-[0_8px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px"
+                disabled={uploading}
+                className="w-full inline-flex items-center justify-center rounded-full bg-secondary px-6 py-3 text-slate-900 font-medium shadow-[0_6px_0_rgba(0,0,0,0.08)] hover:shadow-[0_8px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px disabled:opacity-60"
                 onClick={() => {
-                  console.log("Start Studying clicked", { notesText });
+                  setUploadError(null);
+                  const text = notesText.trim();
+                  if (text.length === 0) {
+                    setUploadError("Please paste some notes or upload a file.");
+                    return;
+                  }
+                  sessionStorage.setItem("knotes_extracted_text", text);
                   setIsModalOpen(false);
                   window.location.href = "/study";
                 }}
               >
-                Start Studying
+                {uploading ? "Processing…" : "Start Studying"}
               </button>
             </div>
           </div>
