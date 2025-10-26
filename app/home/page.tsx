@@ -29,9 +29,13 @@ export default function HomePage() {
       try {
         setUploading(true);
         const text = await extractTextFromFile(files[0]);
-        sessionStorage.setItem("knotes_extracted_text", text);
-        setIsModalOpen(false);
-        window.location.href = "/study";
+        if (text && text.trim().length > 0) {
+          sessionStorage.setItem("knotes_extracted_text", text.trim());
+          setIsModalOpen(false);
+          window.location.href = "/study";
+        } else {
+          throw new Error("No text could be extracted from the document.");
+        }
       } catch (err: any) {
         console.error(err);
         setUploadError(err?.message || "Failed to analyze the document.");
@@ -189,9 +193,13 @@ export default function HomePage() {
                         try {
                           setUploading(true);
                           const text = await extractTextFromFile(files[0]);
-                          sessionStorage.setItem("knotes_extracted_text", text);
-                          setIsModalOpen(false);
-                          window.location.href = "/study";
+                          if (text && text.trim().length > 0) {
+                            sessionStorage.setItem("knotes_extracted_text", text.trim());
+                            setIsModalOpen(false);
+                            window.location.href = "/study";
+                          } else {
+                            throw new Error("No text could be extracted from the document.");
+                          }
                         } catch (err: any) {
                           console.error(err);
                           setUploadError(err?.message || "Failed to analyze the document.");
