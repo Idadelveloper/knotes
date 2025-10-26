@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { FaUser, FaEnvelope, FaLock } from "react-icons/fa";
+import { createUserWithEmailAndPassword, updateProfile, getAuth } from "firebase/auth";
+import { app } from "@/lib/firebase";
 
 export default function CreateAccountPage() {
   const [name, setName] = useState("");
@@ -11,18 +13,49 @@ export default function CreateAccountPage() {
   const [confirm, setConfirm] = useState("");
   const [agree, setAgree] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password || !confirm) return alert("Please fill out all fields");
-    if (password !== confirm) return alert("Passwords do not match");
-    if (!agree) return alert("Please accept the Terms");
+    setError(null);
+    if (!name || !email || !password || !confirm) return setError("Please fill out all fields");
+    if (password !== confirm) return setError("Passwords do not match");
+    if (!agree) return setError("Please accept the Terms");
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      // After account creation, route to /home for now
-      window.location.href = "/home";
-    }, 700);
+
+    const authInstance = getAuth(app);
+    createUserWithEmailAndPassword(authInstance, email.trim(), password)
+      .then((cred) => {
+        if (cred.user && name.trim()) {
+          return updateProfile(cred.user, { displayName: name.trim() });
+        }
+        return Promise.resolve();
+      })
+      .then(() => {
+        setSuccess("Account created! You’re in.");
+        setTimeout(() => {
+          window.location.href = "/home";
+        }, 900);
+      })
+      .catch((err: any) => {
+        console.error(err);
+        const code = err?.code as string | undefined;
+        if (code === "auth/configuration-not-found") {
+          setError(
+            "Authentication is not fully configured. Ensure Firebase env vars are set and Email/Password sign-in is enabled in Firebase Console."
+          );
+        } else if (code === "auth/email-already-in-use") {
+          setError("This email is already in use. Try logging in instead.");
+        } else if (code === "auth/invalid-email") {
+          setError("Please enter a valid email address.");
+        } else if (code === "auth/weak-password") {
+          setError("Password should be at least 6 characters.");
+        } else {
+          setError(err?.message || "Failed to create account. Please try again.");
+        }
+        setSubmitting(false);
+      });
   };
 
   return (
@@ -116,6 +149,10 @@ export default function CreateAccountPage() {
               I agree to the <a className="text-primary hover:underline" href="#">Terms</a> and <a className="text-primary hover:underline" href="#">Privacy</a>
             </label>
 
+            {error && (
+              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">{error}</div>
+            )}
+
             <button
               type="submit"
               disabled={submitting}
@@ -130,6 +167,15 @@ export default function CreateAccountPage() {
           </p>
         </div>
       </div>
+
+      {/* Success toast */}
+      {success && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="rounded-lg bg-emerald-600 text-white text-sm px-4 py-2 shadow-lg ring-1 ring-black/10">
+            {success}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

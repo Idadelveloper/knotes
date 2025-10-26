@@ -3,22 +3,50 @@
 import Link from "next/link";
 import { useState } from "react";
 import { FaEnvelope, FaLock } from "react-icons/fa";
+import { app } from "@/lib/firebase";
+import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence, getAuth } from "firebase/auth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return alert("Please enter email and password");
+    setError(null);
+    if (!email || !password) return setError("Please enter email and password");
     setSubmitting(true);
-    // Placeholder auth flow: route to /home
-    setTimeout(() => {
-      setSubmitting(false);
-      window.location.href = "/home";
-    }, 600);
+
+    // Set persistence, then sign in (promise chain per docs style)
+    setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence)
+      .then(() => signInWithEmailAndPassword(auth, email.trim(), password))
+      .then((userCredential) => {
+        // Signed in
+        void userCredential; // not used directly here
+        setSuccess("Signed in successfully.");
+        setTimeout(() => { window.location.href = "/home"; }, 900);
+      })
+      .catch((err: any) => {
+        console.error(err);
+        const code = err?.code as string | undefined;
+        if (code === "auth/configuration-not-found") {
+          setError(
+            "Authentication is not fully configured. Ensure Firebase env vars are set and Email/Password sign-in is enabled in Firebase Console."
+          );
+        } else if (code === "auth/invalid-email") {
+          setError("Please enter a valid email address.");
+        } else if (code === "auth/invalid-credential" || code === "auth/wrong-password") {
+          setError("Incorrect email or password.");
+        } else if (code === "auth/user-not-found") {
+          setError("No user found with this email. Try creating an account.");
+        } else {
+          setError(err?.message || "Failed to sign in. Please try again.");
+        }
+        setSubmitting(false);
+      });
   };
 
   return (
@@ -83,6 +111,10 @@ export default function LoginPage() {
               <Link href="#" className="text-primary hover:underline">Forgot password?</Link>
             </div>
 
+            {error && (
+              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">{error}</div>
+            )}
+
             <button
               type="submit"
               disabled={submitting}
@@ -97,6 +129,15 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+
+      {/* Success toast */}
+      {success && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="rounded-lg bg-emerald-600 text-white text-sm px-4 py-2 shadow-lg ring-1 ring-black/10">
+            {success}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

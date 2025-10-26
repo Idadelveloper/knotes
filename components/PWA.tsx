@@ -8,7 +8,7 @@ export default function PWA() {
 
     const register = async () => {
       try {
-        const swUrl = "/sw.js";
+        const swUrl = "/sw.ts";
         const reg = await navigator.serviceWorker.register(swUrl, { scope: "/" });
 
         // Listen for updates and activate the new SW immediately.

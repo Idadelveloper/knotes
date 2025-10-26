@@ -1,7 +1,7 @@
 /* Knotes Service Worker powered by Serwist (TypeScript) */
 
 // We use the UMD build of Serwist via importScripts to avoid bundling.
-// This file is compiled to public/sw.js during build.
+// This file is compiled to public/sw.ts during build.
 
 export {};
 
@@ -13,7 +13,11 @@ declare global {
   }
 }
 
-declare const self: ServiceWorkerGlobalScope & WorkerGlobalScope;
+declare const self: WorkerGlobalScope & {
+  importScripts: (...args: string[]) => void;
+  serwist?: any;
+  __SW_MANIFEST?: (any | string)[] | undefined;
+};
 
 // Load Serwist UMD bundle at runtime (from CDN)
 // You can self-host this later if preferred.
@@ -55,8 +59,8 @@ self.importScripts("https://unpkg.com/serwist@9.2.1/dist/serwist.umd.js");
   serwist.addEventListeners();
 
   // Interop with native SW API — minimal example
-  self.addEventListener("message", (event: ExtendableMessageEvent) => {
+  (self as any).addEventListener("message", (event: any) => {
     // Allow pages to ask SW to skip waiting immediately
-    if (event && (event as any).data === "SKIP_WAITING") self.skipWaiting();
+    if (event && event.data === "SKIP_WAITING") (self as any).skipWaiting();
   });
 })();

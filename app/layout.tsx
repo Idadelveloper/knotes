@@ -3,11 +3,13 @@ import "./globals.css";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import PWA from "../components/PWA";
+import AuthProvider from "@/components/AuthProvider";
 
 export const metadata: Metadata = {
   title: "Knotes — Focused AI study space",
   description:
     "Knotes helps students study smarter with focused reading, AI explanations, adaptive music, songs, and TTS — all in one tab.",
+    manifest: "manifest.ts/"
 };
 
 export default function RootLayout({
@@ -18,9 +20,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark:[color-scheme:dark] [color-scheme:light]">
       <body className="antialiased font-sans text-slate-900 bg-accent dark:bg-[--color-dark-bg] dark:text-[--color-accent] min-h-screen">
-        <NavBar isAuthenticated={false} />
-        {children}
-        <Footer />
+        <AuthProvider>
+          <NavBar isAuthenticated={false} />
+          {children}
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

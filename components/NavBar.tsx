@@ -3,9 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { usePathname } from "next/navigation";
 import { FaUserCircle } from "react-icons/fa";
 import { HiOutlineMenu, HiOutlineX } from "react-icons/hi";
+import { useAuth } from "@/components/AuthProvider";
 
 type NavBarProps = {
   isAuthenticated?: boolean;
@@ -13,19 +13,13 @@ type NavBarProps = {
 
 export default function NavBar({ isAuthenticated = false }: NavBarProps) {
   const [open, setOpen] = useState(false);
-  const pathname = usePathname();
-  const isAuth =
-    isAuthenticated ||
-    pathname?.startsWith("/home") ||
-    pathname?.startsWith("/study") ||
-    pathname?.startsWith("/music") ||
-    pathname?.startsWith("/settings") ||
-    false;
+  const { user } = useAuth();
+  const isAuth = Boolean(isAuthenticated || user);
 
   const NavCenter = () => (
     <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-700 dark:text-[--color-accent]">
-      <Link href="#" className="hover:text-slate-900 dark:hover:text-white">Study</Link>
-      <Link href="#" className="hover:text-slate-900 dark:hover:text-white">Music</Link>
+      <Link href="/study" className="hover:text-slate-900 dark:hover:text-white">Study</Link>
+      <Link href="/music" className="hover:text-slate-900 dark:hover:text-white">Music</Link>
       <Link href="#" className="hover:text-slate-900 dark:hover:text-white">History</Link>
     </nav>
   );
@@ -90,8 +84,8 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
           <div className="mx-auto max-w-5xl px-4 sm:px-6 py-3">
             {isAuth ? (
               <div className="flex flex-col gap-2">
-                <Link href="#" className="py-2 text-slate-800 dark:text-[--color-accent]">Study</Link>
-                <Link href="#" className="py-2 text-slate-800 dark:text-[--color-accent]">Music</Link>
+                <Link href="/study" className="py-2 text-slate-800 dark:text-[--color-accent]">Study</Link>
+                <Link href="/music" className="py-2 text-slate-800 dark:text-[--color-accent]">Music</Link>
                 <Link href="#" className="py-2 text-slate-800 dark:text-[--color-accent]">History</Link>
                 <Link
                 href="/settings"

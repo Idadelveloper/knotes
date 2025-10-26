@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { FaMusic, FaThLarge, FaCog } from "react-icons/fa";
+import { useAuth } from "@/components/AuthProvider";
 
 function NavItem({ href, label, icon: Icon }: { href: string; label: string; icon: any }) {
   const pathname = usePathname();
@@ -26,6 +27,10 @@ function NavItem({ href, label, icon: Icon }: { href: string; label: string; ico
 }
 
 export default function Sidebar() {
+  const { user } = useAuth();
+  const displayName = user?.displayName || (user?.email ? user.email.split("@")[0] : "Guest");
+  const email = user?.email || "Not signed in";
+
   return (
     <aside className="fixed left-0 top-16 md:top-16 h-[calc(100vh-4rem)] w-64 bg-white border-r border-gray-200 p-4 flex flex-col z-30">
       {/* Top: Logo */}
@@ -46,12 +51,13 @@ export default function Sidebar() {
       {/* Bottom user section */}
       <div className="mt-auto">
         <div className="flex items-center gap-3 p-2">
-          <div className="h-10 w-10 rounded-full overflow-hidden ring-1 ring-black/10">
+          <div className="h-10 w-10 rounded-full overflow-hidden ring-1 ring-black/10 bg-white">
+            {/* Use logo as placeholder avatar */}
             <Image src="/images/logo.png" alt="Avatar" width={40} height={40} />
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-medium text-slate-900 truncate">Alex Johnson</div>
-            <div className="text-xs text-slate-500 truncate">alex.j@email.com</div>
+            <div className="text-sm font-medium text-slate-900 truncate">{displayName}</div>
+            <div className="text-xs text-slate-500 truncate">{email}</div>
           </div>
         </div>
         <Link

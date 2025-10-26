@@ -3,8 +3,12 @@
 import { useState } from "react";
 import SettingsCard from "@/components/SettingsCard";
 import { FaCloudUploadAlt, FaFileAlt, FaEllipsisH } from "react-icons/fa";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
 
 export default function SettingsPage() {
+  const router = useRouter();
   // State Management
   const [displayMode, setDisplayMode] = useState<'Light' | 'Dark' | 'Focus'>("Light");
   const [textSize, setTextSize] = useState<number>(16);
@@ -39,11 +43,27 @@ export default function SettingsPage() {
     </div>
   );
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push("/");
+    } catch (e) {
+      alert("Failed to log out. Please try again.");
+    }
+  };
+
   return (
     <main className="pb-10">
       {/* Header */}
-      <header className="mb-6">
+      <header className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
+        <button
+          onClick={handleLogout}
+          className="rounded-lg px-4 py-2 ring-1 ring-red-200 bg-white hover:bg-red-50 text-red-600 font-medium"
+          title="Sign out of your account"
+        >
+          Log Out
+        </button>
       </header>
 
       {/* Cards stack */}
@@ -181,12 +201,18 @@ export default function SettingsPage() {
       </div>
 
       {/* Footer actions */}
-      <div className="flex justify-end mt-6">
+      <div className="flex justify-end mt-6 gap-3">
         <button
           className="rounded-lg px-6 py-2 bg-blue-500 text-white font-medium shadow hover:brightness-105"
           onClick={() => alert('Settings saved!')}
         >
           Save Changes
+        </button>
+        <button
+          className="rounded-lg px-6 py-2 ring-1 ring-red-200 bg-white hover:bg-red-50 text-red-600 font-medium"
+          onClick={handleLogout}
+        >
+          Log Out
         </button>
       </div>
     </main>
