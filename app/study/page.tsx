@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaPlay, FaPause, FaStepForward, FaStepBackward, FaVolumeUp, FaSearch, FaBrain, FaGlobe, FaPenFancy, FaCopy, FaChevronDown, FaChevronRight, FaDownload, FaMagic, FaVolumeUp as FaVolume, FaCloudUploadAlt, FaMusic, FaChartBar, FaQuestionCircle, FaClock } from "react-icons/fa";
 import { HiOutlineX } from "react-icons/hi";
+import { useRouter } from "next/navigation";
 
 // Simple toast system
 type Toast = { id: number; message: string };
 
 export default function StudyWorkspace() {
+  const router = useRouter();
   // Editor refs/state
   const editorRef = useRef<HTMLDivElement | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
@@ -318,7 +320,7 @@ export default function StudyWorkspace() {
               </button>
               <button
                 className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2 hover:bg-blue-200"
-                onClick={() => pushToast("🎵 Generating study music…")}
+                onClick={() => router.push("/music")}
                 title="Generate Study Music"
               >
                 <FaMusic /> Generate Study Music
@@ -355,7 +357,7 @@ export default function StudyWorkspace() {
             <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => pushToast('📄 Upload coming soon')}>
               <FaCloudUploadAlt /> Upload Notes
             </button>
-            <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => pushToast('🎵 Generating study music…')}>
+            <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => router.push('/music')}>
               <FaMusic /> Generate Study Music
             </button>
             <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => pushToast('📝 Generating quiz…')}>
