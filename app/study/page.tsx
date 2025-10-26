@@ -67,23 +67,62 @@ export default function StudyWorkspace() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2200);
   };
 
-  // Load extracted or pasted text from the Home modal on first mount
-  useEffect(() => {
-    const key = "knotes_extracted_text";
-    const text = typeof window !== "undefined" ? sessionStorage.getItem(key) : null;
-    try {
-      if (text) {
-        console.log("[Study] Loaded extracted text from sessionStorage:", text.slice(0, 500), text.length > 500 ? `... (${text.length} chars total)` : "");
+  // Derived title for the notes
+  const [notesTitle, setNotesTitle] = useState<string>("Study Notes");
+
+  // Basic markdown to HTML converter (very small subset: headings, bullets, paragraphs)
+  const mdToHtml = (md: string) => {
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const lines = md.split(/\r?\n/);
+    const out: string[] = [];
+    let inList = false;
+    for (const raw of lines) {
+      const line = raw.trimEnd();
+      if (/^\s*$/.test(line)) { if (inList) { out.push('</ul>'); inList = false; } continue; }
+      if (/^#{1,6}\s+/.test(line)) {
+        if (inList) { out.push('</ul>'); inList = false; }
+        const level = (line.match(/^#+/)![0].length);
+        const text = esc(line.replace(/^#{1,6}\s+/, ''));
+        out.push(`<h${level}>${text}</h${level}>`);
+      } else if (/^[-*]\s+/.test(line)) {
+        if (!inList) { out.push('<ul class="list-disc pl-6">'); inList = true; }
+        const item = esc(line.replace(/^[-*]\s+/, ''));
+        out.push(`<li>${item}</li>`);
       } else {
-        console.log("[Study] No extracted text found in sessionStorage.");
+        if (inList) { out.push('</ul>'); inList = false; }
+        out.push(`<p>${esc(line)}</p>`);
       }
+    }
+    if (inList) out.push('</ul>');
+    return out.join('\n');
+  };
+
+  // Load structured/extracted text and title from sessionStorage on first mount
+  useEffect(() => {
+    const structuredKey = "knotes_structured_text";
+    const extractedKey = "knotes_extracted_text";
+    const titleKey = "knotes_title";
+    const structured = typeof window !== "undefined" ? sessionStorage.getItem(structuredKey) : null;
+    const extracted = typeof window !== "undefined" ? sessionStorage.getItem(extractedKey) : null;
+    const savedTitle = typeof window !== "undefined" ? sessionStorage.getItem(titleKey) : null;
+    try {
+      console.log("[Study] Session payload:", { structuredPreview: structured?.slice(0, 200), extractedPreview: extracted?.slice(0, 200), title: savedTitle });
     } catch {}
-    if (text && editorRef.current) {
-      editorRef.current.innerText = text;
-      sessionStorage.removeItem(key);
-      try {
-        console.log("[Study] Injected extracted text into editor.");
-      } catch {}
+    if (savedTitle) setNotesTitle(savedTitle);
+
+    const payload = structured && structured.trim().length > 0 ? structured : extracted;
+    if (payload && editorRef.current) {
+      // Prefer to render simple markdown for better readability
+      const html = mdToHtml(payload);
+      if (html && /<\w+/.test(html)) {
+        editorRef.current.innerHTML = html;
+      } else {
+        editorRef.current.innerText = payload;
+      }
+      sessionStorage.removeItem(structuredKey);
+      sessionStorage.removeItem(extractedKey);
+      sessionStorage.removeItem(titleKey);
+      try { console.log("[Study] Injected notes into editor."); } catch {}
     }
   }, []);
 
@@ -412,7 +451,7 @@ export default function StudyWorkspace() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Notes Editor (2 cols) */}
             <section className="lg:col-span-2">
-              <h2 className="text-xl font-semibold mb-4 text-slate-900">My Notes</h2>
+              <h2 className="text-xl font-semibold mb-4 text-slate-900">{notesTitle}</h2>
               <div
                 ref={editorRef}
                 contentEditable

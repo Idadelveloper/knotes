@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { FaCloudUploadAlt, FaInfoCircle, FaClock } from "react-icons/fa";
 import { HiOutlineX } from "react-icons/hi";
 import { extractTextFromFile } from "@/lib/ai";
+import { rewriteText, generateTitle } from "@/lib/rewriter";
 
 export default function HomePage() {
   // UI state
@@ -30,7 +31,13 @@ export default function HomePage() {
         setUploading(true);
         const text = await extractTextFromFile(files[0]);
         if (text && text.trim().length > 0) {
+          // Post-process with Chrome Rewriter (or Gemini fallback) to structure notes
+          const { text: structured, used } = await rewriteText(text.trim());
+          const { title } = await generateTitle(text.trim());
           sessionStorage.setItem("knotes_extracted_text", text.trim());
+          sessionStorage.setItem("knotes_structured_text", (structured || text).trim());
+          sessionStorage.setItem("knotes_title", title || "Study Notes");
+          console.log(`[Home] Structured notes via ${used}. Redirecting to /study.`);
           setIsModalOpen(false);
           window.location.href = "/study";
         } else {
@@ -194,7 +201,12 @@ export default function HomePage() {
                           setUploading(true);
                           const text = await extractTextFromFile(files[0]);
                           if (text && text.trim().length > 0) {
+                            const { text: structured, used } = await rewriteText(text.trim());
+                            const { title } = await generateTitle(text.trim());
                             sessionStorage.setItem("knotes_extracted_text", text.trim());
+                            sessionStorage.setItem("knotes_structured_text", (structured || text).trim());
+                            sessionStorage.setItem("knotes_title", title || "Study Notes");
+                            console.log(`[Home] Structured notes via ${used}. Redirecting to /study.`);
                             setIsModalOpen(false);
                             window.location.href = "/study";
                           } else {
@@ -235,16 +247,29 @@ export default function HomePage() {
               <button
                 disabled={uploading}
                 className="w-full inline-flex items-center justify-center rounded-full bg-secondary px-6 py-3 text-slate-900 font-medium shadow-[0_6px_0_rgba(0,0,0,0.08)] hover:shadow-[0_8px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px disabled:opacity-60"
-                onClick={() => {
+                onClick={async () => {
                   setUploadError(null);
                   const text = notesText.trim();
                   if (text.length === 0) {
                     setUploadError("Please paste some notes or upload a file.");
                     return;
                   }
-                  sessionStorage.setItem("knotes_extracted_text", text);
-                  setIsModalOpen(false);
-                  window.location.href = "/study";
+                  try {
+                    setUploading(true);
+                    const { text: structured, used } = await rewriteText(text);
+                    const { title } = await generateTitle(text);
+                    sessionStorage.setItem("knotes_extracted_text", text);
+                    sessionStorage.setItem("knotes_structured_text", (structured || text).trim());
+                    sessionStorage.setItem("knotes_title", title || "Study Notes");
+                    console.log(`[Home] Structured pasted notes via ${used}. Redirecting to /study.`);
+                    setIsModalOpen(false);
+                    window.location.href = "/study";
+                  } catch (err: any) {
+                    console.error(err);
+                    setUploadError(err?.message || "Failed to process notes.");
+                  } finally {
+                    setUploading(false);
+                  }
                 }}
               >
                 {uploading ? "Processing…" : "Start Studying"}
