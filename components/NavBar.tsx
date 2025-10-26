@@ -65,7 +65,7 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
               </Link>
             ) : (
               <Link
-                href="/home"
+                href="/login"
                 className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-slate-900 font-medium shadow-[0_4px_0_rgba(0,0,0,0.08)] transition hover:shadow-[0_6px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px active:shadow-[0_3px_0_rgba(0,0,0,0.1)]"
               >
                 Login
@@ -105,7 +105,7 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
               <div className="flex items-center justify-between py-2">
                 <span className="text-slate-700 dark:text-[--color-accent] font-medium">Welcome</span>
                 <Link
-                  href="/home"
+                  href="/login"
                   className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-slate-900 font-medium shadow-[0_4px_0_rgba(0,0,0,0.08)]"
                 >
                   Login
