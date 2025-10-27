@@ -40,7 +40,7 @@ export default function ChatPanel({
   if (!open) return null;
 
   return (
-    <div className="fixed top-24 bottom-28 right-4 z-50 w-[88vw] max-w-md rounded-2xl bg-white/95 dark:bg-[--color-dark-bg]/95 ring-1 ring-black/10 dark:ring-white/10 shadow-2xl overflow-hidden">
+    <div className="fixed top-24 bottom-36 right-4 z-50 w-[88vw] max-w-md rounded-2xl bg-white/95 dark:bg-[--color-dark-bg]/95 ring-1 ring-black/10 dark:ring-white/10 shadow-2xl overflow-hidden">
       {/* Header using Chatscope ConversationHeader for consistency */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-black/10 dark:border-white/10">
         <div className="flex items-center gap-2 text-slate-900 dark:text-[--color-accent]">

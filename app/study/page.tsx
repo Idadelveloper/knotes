@@ -8,6 +8,8 @@ import { HiOutlineX } from "react-icons/hi";
 import ChatPanel from "@/components/ChatPanel";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import { getGeminiModel } from "@/lib/ai";
+import { translateText } from "@/lib/translate";
 
 // Simple toast system
 type Toast = { id: number; message: string };
@@ -43,6 +45,8 @@ export default function StudyWorkspace() {
     { role: 'ai', text: "Hi! I’m your study assistant. Ask me to explain, summarize, or quiz you based on your notes." }
   ]);
   const [chatTyping, setChatTyping] = useState(false);
+  // When chat is open, reserve space on the right on md+ so notes and chat sit side-by-side
+  const rightPadClass = chatOpen ? "md:pr-[32rem]" : "";
 
   const sendChat = () => {
     const text = chatInput.trim();
@@ -81,6 +85,20 @@ export default function StudyWorkspace() {
 
   // Assistant panel output
   const [assistantOutput, setAssistantOutput] = useState<string>("");
+
+  // Notes panel tabs: Original | Summarize | Translate | Voice Read
+  const [notesTab, setNotesTab] = useState<"original" | "summarize" | "translate" | "voice">("original");
+  const [summaryText, setSummaryText] = useState<string>("");
+  const [translatedText, setTranslateText] = useState<string>("");
+  const [notesLoading, setNotesLoading] = useState<false | "summarize" | "translate">(false);
+  const [notesError, setNotesError] = useState<string>("");
+  const [ttsSpeaking, setTtsSpeaking] = useState<boolean>(false);
+  // Keep a mirror of the editor text so features work even when the editor DOM isn't mounted
+  const [editorText, setEditorText] = useState<string>("");
+  // Translate settings
+  const [translateLang, setTranslateLang] = useState<string>("es");
+  const [translatorDownloading, setTranslatorDownloading] = useState<boolean>(false);
+  const [translatorProgress, setTranslatorProgress] = useState<number | null>(null);
 
   // Toasts
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -139,13 +157,18 @@ export default function StudyWorkspace() {
       const html = mdToHtml(payload);
       if (html && /<\w+/.test(html)) {
         editorRef.current.innerHTML = html;
+        setEditorText(editorRef.current.innerText.trim());
       } else {
         editorRef.current.innerText = payload;
+        setEditorText(payload.trim());
       }
       sessionStorage.removeItem(structuredKey);
       sessionStorage.removeItem(extractedKey);
       sessionStorage.removeItem(titleKey);
       try { console.log("[Study] Injected notes into editor."); } catch {}
+    } else if (editorRef.current) {
+      // No session payload—mirror whatever default content is rendered
+      setEditorText((editorRef.current.innerText || editorRef.current.textContent || "").trim());
     }
   }, []);
 
@@ -355,6 +378,110 @@ export default function StudyWorkspace() {
     return () => clearInterval(id);
   }, [isTimerRunning]);
 
+  // Helpers to get plain text from editor
+  const getEditorPlainText = () => {
+    const el = editorRef.current;
+    // Prefer innerText to strip any HTML formatting; fall back to mirrored state when editor DOM isn't mounted
+    const domText = el ? (el.innerText || el.textContent || "").trim() : "";
+    return domText || editorText.trim();
+  };
+
+  // Generate a concise summary using Gemini
+  const summarizeNotes = async () => {
+    const text = getEditorPlainText();
+    if (!text) {
+      setNotesError("Nothing to summarize. Paste or type some notes first.");
+      return;
+    }
+    try {
+      setNotesError("");
+      setNotesLoading("summarize");
+      const model = getGeminiModel();
+      const prompt = `Summarize the following study notes into a concise paragraph and 3-5 bullet points. Keep it accurate and clear.\n\nNotes:\n"""\n${text}\n"""`;
+      const res = await model.generateContent(prompt);
+      const out = res?.response?.text?.() ?? "";
+      setSummaryText(out.trim() || "(No summary generated)");
+    } catch (e: any) {
+      setNotesError(e?.message || "Failed to generate summary.");
+    } finally {
+      setNotesLoading(false);
+    }
+  };
+
+  // Translate notes via built-in Translator API (with fallback) using lib/translate
+  const translateNotes = async (lang: string = translateLang) => {
+    const text = getEditorPlainText();
+    if (!text) {
+      setNotesError("Nothing to translate. Paste or type some notes first.");
+      return;
+    }
+    try {
+      setNotesError("");
+      setNotesLoading("translate");
+      setTranslatorProgress(null);
+      setTranslatorDownloading(false);
+
+      const result = await translateText(text, lang, {
+        onDownloadStart() {
+          setTranslatorDownloading(true);
+        },
+        onDownloadProgress(loaded) {
+          setTranslatorProgress(typeof loaded === 'number' ? loaded : null);
+        },
+      });
+
+      setTranslateText(result.text || '(No translation generated)');
+      setTranslatorDownloading(false);
+      setTranslatorProgress(null);
+      try { console.log(`[Translate] Used: ${result.used} | ${result.sourceLanguage} → ${result.targetLanguage}`); } catch {}
+    } catch (e: any) {
+      setNotesError(e?.message || 'Failed to translate notes.');
+    } finally {
+      setNotesLoading(false);
+    }
+  };
+
+  // Voice read controls using Web Speech API
+  const speakAll = () => {
+    const text = getEditorPlainText();
+    if (!text) {
+      pushToast("⚠️ Nothing to read");
+      return;
+    }
+    try {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate = 1.0;
+        u.pitch = 1.0;
+        u.onend = () => setTtsSpeaking(false);
+        setTtsSpeaking(true);
+        window.speechSynthesis.speak(u);
+        pushToast("🔊 Reading notes…");
+      } else {
+        pushToast("⚠️ TTS not supported in this browser");
+      }
+    } catch {
+      pushToast("⚠️ Failed to start TTS");
+    }
+  };
+  const stopSpeak = () => {
+    try {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        setTtsSpeaking(false);
+      }
+    } catch {}
+  };
+
+  // Auto-run generators on first switch
+  useEffect(() => {
+    if (notesTab === "summarize" && !summaryText && !notesLoading) summarizeNotes();
+    // Do not auto-run translate; user selects a language first and clicks Translate
+    if (notesTab !== "voice") stopSpeak();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notesTab]);
+
   return (
     <main className="relative w-full min-h-screen pb-36">{/* padding bottom for dock */}
       {/* Page background */}
@@ -367,7 +494,7 @@ export default function StudyWorkspace() {
       </div>
 
       {/* Header Bar */}
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 pt-16">
+      <div className={`mx-auto w-full max-w-7xl px-4 sm:px-6 pt-16 ${rightPadClass} transition-[padding] duration-300`}>
         <div className="mb-6 flex items-center justify-between">
           {/* Left: Timer control */}
           <div className="flex items-center gap-2 text-slate-900 dark:text-[--color-accent]">
@@ -467,24 +594,146 @@ export default function StudyWorkspace() {
       />
 
       {/* Main card with two-column grid */}
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 pb-6">
+      <div className={`mx-auto w-full max-w-7xl px-4 sm:px-6 pb-6 ${rightPadClass} transition-[padding] duration-300`}>
         <div className="bg-white rounded-2xl shadow-lg p-8 ring-1 ring-black/5">
           <div className="grid grid-cols-1 gap-8">
-            {/* Notes Editor (full width, scrollable view) */}
-            <section className="">
-              <h2 className="text-xl font-semibold mb-4 text-slate-900">{notesTitle}</h2>
-              <div
-                ref={editorRef}
-                contentEditable
-                suppressContentEditableWarning
-                className="min-h-[500px] max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 p-4 leading-7 text-slate-900 outline-none focus:ring-2 focus:ring-primary"
-                onInput={() => {}}
-              >
-                <p><strong>The Mitochondrion: Powerhouse of the Cell</strong> — <span className="bg-blue-200/50">Mitochondria generate ATP through cellular respiration</span>, providing energy needed for cellular processes.</p>
-                <p className="mt-3">They have a double membrane, their own DNA, and play roles in apoptosis and calcium storage.</p>
-                <p className="mt-3">In some organisms, organelles and pathways can be highly reduced or even lost due to parasitic or anaerobic lifestyles.</p>
-                <p className="mt-6 text-gray-400 select-none">Paste your notes here to get started...</p>
+            {/* Notes Panel with Tabs */}
+            <section>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h2 className="text-xl font-semibold text-slate-900">{notesTitle}</h2>
+                <div className="inline-flex rounded-full bg-white/60 ring-1 ring-black/10 p-1">
+                  <TabBtn active={notesTab === 'original'} onClick={() => setNotesTab('original')}>Original</TabBtn>
+                  <TabBtn active={notesTab === 'summarize'} onClick={() => setNotesTab('summarize')}>Summarize</TabBtn>
+                  <TabBtn active={notesTab === 'translate'} onClick={() => setNotesTab('translate')}>Translate</TabBtn>
+                  <TabBtn active={notesTab === 'voice'} onClick={() => setNotesTab('voice')}>Voice Read</TabBtn>
+                </div>
               </div>
+
+              {/* Content: switch by tab */}
+              {notesTab === 'original' && (
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  className="min-h-[500px] max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 p-4 leading-7 text-slate-900 outline-none focus:ring-2 focus:ring-primary"
+                  onInput={() => { setEditorText(getEditorPlainText()); }}
+                >
+                  <p><strong>The Mitochondrion: Powerhouse of the Cell</strong> — <span className="bg-blue-200/50">Mitochondria generate ATP through cellular respiration</span>, providing energy needed for cellular processes.</p>
+                  <p className="mt-3">They have a double membrane, their own DNA, and play roles in apoptosis and calcium storage.</p>
+                  <p className="mt-3">In some organisms, organelles and pathways can be highly reduced or even lost due to parasitic or anaerobic lifestyles.</p>
+                  <p className="mt-6 text-gray-400 select-none">Paste your notes here to get started...</p>
+                </div>
+              )}
+
+              {notesTab === 'summarize' && (
+                <div className="min-h-[300px] max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 p-4 bg-white/70">
+                  {notesLoading === 'summarize' ? (
+                    <p className="text-slate-700">Summarizing…</p>
+                  ) : notesError ? (
+                    <p className="text-red-600">{notesError}</p>
+                  ) : (
+                    <article className="prose prose-slate max-w-none">
+                      <pre className="whitespace-pre-wrap text-slate-900">{summaryText || "Switch to Original and add some notes, or click Summarize again."}</pre>
+                    </article>
+                  )}
+                  <div className="mt-3 flex justify-end">
+                    <button className="rounded-full bg-secondary px-4 py-2 text-slate-900" onClick={() => insertIntoNotes("\n" + (summaryText || "") + "\n")}>Copy to Notes</button>
+                  </div>
+                </div>
+              )}
+
+              {notesTab === 'translate' && (
+                <div className="rounded-xl border border-gray-200 p-4 bg-white/70">
+                  {/* Controls */}
+                  <div className="flex flex-col md:flex-row md:items-end gap-3">
+                    <div className="flex-1">
+                      <label htmlFor="target-lang" className="block text-sm font-medium text-slate-700 mb-1">Target language</label>
+                      <select
+                        id="target-lang"
+                        className="w-full md:w-64 rounded-lg bg-white ring-1 ring-black/10 px-3 py-2 text-slate-800"
+                        value={translateLang}
+                        onChange={(e) => setTranslateLang((e.target as HTMLSelectElement).value)}
+                      >
+                        {[
+                          ['es','Spanish'],
+                          ['fr','French'],
+                          ['de','German'],
+                          ['it','Italian'],
+                          ['pt','Portuguese'],
+                          ['ru','Russian'],
+                          ['ja','Japanese'],
+                          ['ko','Korean'],
+                          ['zh','Chinese'],
+                          ['ar','Arabic'],
+                          ['hi','Hindi'],
+                          ['yo','Yoruba'],
+                          ['sw','Swahili'],
+                          ['tr','Turkish'],
+                          ['nl','Dutch']
+                        ].map(([code, label]) => (
+                          <option key={code} value={code}>{label} ({code})</option>
+                        ))}
+                      </select>
+                      <p className="mt-1 text-xs text-slate-500">Choose the language and click Translate. You can translate again into another language anytime.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-slate-900 disabled:opacity-60"
+                        disabled={notesLoading === 'translate'}
+                        onClick={() => translateNotes(translateLang)}
+                        title="Translate notes"
+                      >
+                        {notesLoading === 'translate' ? 'Translating…' : 'Translate'}
+                      </button>
+                      <button
+                        className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-black/10 px-4 py-2 text-slate-800"
+                        onClick={() => { setTranslateText(''); setNotesError(''); }}
+                        title="Clear translated text"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Download / availability status */}
+                  {translatorDownloading && (
+                    <div className="mt-2 text-xs text-slate-600">Downloading translation model… {translatorProgress !== null ? Math.round((translatorProgress as number) * 100) + '%' : ''}</div>
+                  )}
+
+                  {/* Result */}
+                  <div className="mt-4 min-h-[220px] max-h-[50vh] overflow-y-auto rounded-lg border border-gray-200 bg-white/60 p-3">
+                    {notesLoading === 'translate' ? (
+                      <p className="text-slate-700">Translating…</p>
+                    ) : notesError ? (
+                      <p className="text-red-600">{notesError}</p>
+                    ) : (
+                      <article className="prose prose-slate max-w-none">
+                        <pre className="whitespace-pre-wrap text-slate-900">{translatedText || "No translation yet. Select a language and click Translate."}</pre>
+                      </article>
+                    )}
+                  </div>
+
+                  <div className="mt-3 flex justify-between items-center">
+                    <span className="text-xs text-slate-500">Target: <strong className="text-slate-700">{translateLang}</strong></span>
+                    <div className="flex items-center gap-2">
+                      <button className="rounded-full bg-secondary px-4 py-2 text-slate-900" onClick={() => insertIntoNotes('\n' + (translatedText || '') + '\n')} disabled={!translatedText}>Copy to Notes</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {notesTab === 'voice' && (
+                <div className="rounded-xl border border-gray-200 p-4 bg-white/70">
+                  <p className="text-slate-700">Use Voice Read to listen to your entire notes content. This uses your browser's built-in text-to-speech.</p>
+                  <div className="mt-3 flex items-center gap-2">
+                    {!ttsSpeaking ? (
+                      <button className="rounded-full bg-primary px-4 py-2 text-slate-900" onClick={speakAll}>Start Reading</button>
+                    ) : (
+                      <button className="rounded-full bg-red-500 px-4 py-2 text-white" onClick={stopSpeak}>Stop</button>
+                    )}
+                  </div>
+                </div>
+              )}
             </section>
 
           </div>
