@@ -1,26 +1,81 @@
-// Firebase AI Logic helpers for Gemini via Vertex AI backend
+// Firebase AI Logic helpers for Gemini via Vertex AI backend, with direct Google GenAI fallback
 // Web client-side usage
 
 import { app } from "./firebase";
 import { getAI, getGenerativeModel, GoogleAIBackend, InferenceMode, type GenerativeModel } from "firebase/ai";
+import { GoogleGenAI } from "@google/genai";
 
-// Initialize a single hybrid model instance (PREFER_ON_DEVICE with cloud fallback)
-let model: GenerativeModel | null = null;
+// Initialize a single model instance
+let model: any | null = null;
 let cachedName: string | null = null;
+let mode: 'direct' | 'firebase' | null = null;
+
+function getApiKey(): string | undefined {
+  return (
+    process.env.NEXT_PUBLIC_GOOGLE_API_KEY ||
+    process.env.NEXT_PUBLIC_API_KEY ||
+    process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+    undefined
+  );
+}
+
+// Wrap @google/genai to look like Firebase AI Logic's GenerativeModel enough for our callers
+function getDirectModel(modelName: string) {
+  const key = getApiKey();
+  if (!key) return null;
+  const ai = new GoogleGenAI({ apiKey: key });
+  const extractText = (res: any): string => {
+    try {
+      if (typeof res.text === 'function') return res.text();
+      if (res.text) return res.text;
+      const c = res.candidates?.[0];
+      const parts = c?.content?.parts;
+      if (Array.isArray(parts)) {
+        const t = parts.map((p: any) => p.text).filter(Boolean).join('');
+        if (t) return t;
+      }
+    } catch {}
+    return '';
+  };
+  return {
+    async generateContent(input: any) {
+      // Normalize input to contents format
+      let parts: any[] = [];
+      if (typeof input === 'string') {
+        parts = [{ text: input }];
+      } else if (Array.isArray(input)) {
+        parts = input.map((p) => (typeof p === 'string' ? { text: p } : p));
+      } else {
+        parts = [input];
+      }
+      const contents = [{ role: 'user', parts }];
+      // @google/genai accepts { model, contents }
+      // @ts-ignore
+      const res = await ai.models.generateContent({ model: modelName, contents });
+      const text = extractText(res) || '';
+      return { response: { text: () => text } } as any;
+    },
+  } as const;
+}
 
 // Default cloud model to use when falling back (can be overridden)
 export function getGeminiModel(modelName: string = "gemini-2.0-flash-lite") {
   // Re-create if model name changes
   if (!model || cachedName !== modelName) {
-    const ai = getAI(app, { backend: new GoogleAIBackend() });
-    // Use hybrid inference per Firebase AI Logic docs: prefer on-device, fallback to cloud
-    model = getGenerativeModel(ai, {
-      mode: InferenceMode.PREFER_ON_DEVICE,
-      inCloudParams: {
-        model: modelName,
-      },
-    });
+    const direct = getDirectModel(modelName);
+    if (direct) {
+      model = direct;
+      mode = 'direct';
+    } else {
+      const ai = getAI(app, { backend: new GoogleAIBackend() });
+      model = getGenerativeModel(ai, {
+        mode: InferenceMode.PREFER_ON_DEVICE,
+        inCloudParams: { model: modelName },
+      });
+      mode = 'firebase';
+    }
     cachedName = modelName;
+    try { console.log(`[AI] Using ${mode} model: ${modelName}`); } catch {}
   }
   return model!;
 }

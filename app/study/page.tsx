@@ -51,6 +51,11 @@ export default function StudyWorkspace() {
     { role: 'ai', text: "Hi! I’m your study assistant. Ask me to explain, summarize, or quiz you based on your notes." }
   ]);
   const [chatTyping, setChatTyping] = useState(false);
+  // Voice chat state
+  const [recording, setRecording] = useState(false);
+  const [speakEnabled, setSpeakEnabled] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   // When chat is open, reserve space on the right on md+ so notes and chat sit side-by-side
   const rightPadClass = chatOpen ? "md:pr-[32rem]" : "";
 
@@ -75,6 +80,15 @@ export default function StudyWorkspace() {
         },
       });
       setChatMessages((m) => [...m, { role: 'ai', text: text || '(No response)'}]);
+      // Optional: Speak the AI reply if enabled
+      try {
+        if (speakEnabled) {
+          const { speak } = await import('@/lib/utils/speech');
+          await speak(text || '', { rate: 1.0, pitch: 1.0 });
+        }
+      } catch (e) {
+        try { console.warn('[Chat] TTS failed', e); } catch {}
+      }
       try { console.log(`[Chat] Reply via ${used}`); } catch {}
     } catch (e: any) {
       console.warn('[Chat] promptWithNotes failed:', e);
@@ -1157,6 +1171,81 @@ export default function StudyWorkspace() {
         onSend={(text) => {
           // Delegate to the prompt-powered handler that uses the user's notes as context
           sendChat(text);
+        }}
+        onMicStart={async () => {
+          try {
+            if (recording) return;
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            audioChunksRef.current = [];
+            mr.ondataavailable = (e) => { if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data); };
+            mr.onstop = async () => {
+              setRecording(false);
+              const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+              // Transcribe via Firebase AI Logic (Gemini) using generateContent with audio file part
+              try {
+                setChatTyping(true);
+                const file = new File([blob], 'audio.webm', { type: 'audio/webm' });
+                const { fileToGenerativePart, getGeminiModel } = await import('@/lib/ai');
+                const part = await fileToGenerativePart(file);
+                const model = getGeminiModel('gemini-2.5-flash');
+                const prompt = 'Transcribe this user audio into accurate text for a study assistant chat.';
+                const result = await model.generateContent([prompt, part as any]);
+                const transcript = (result?.response?.text?.() as string) || '';
+                if (transcript.trim()) {
+                  setChatMessages((m) => [...m, { role: 'user', text: transcript.trim() }]);
+                  await sendChat(transcript.trim());
+                } else {
+                  setChatMessages((m) => [...m, { role: 'ai', text: 'Sorry, I could not transcribe that audio.' }]);
+                }
+              } catch (e) {
+                console.warn('[Chat] Transcription failed', e);
+                setChatMessages((m) => [...m, { role: 'ai', text: 'Transcription failed. Please try again.' }]);
+                setChatTyping(false);
+              }
+            };
+            mr.start(250);
+            mediaRecorderRef.current = mr;
+            setRecording(true);
+          } catch (e) {
+            pushToast('⚠️ Microphone permission denied or unavailable.');
+          }
+        }}
+        onMicStop={() => {
+          try {
+            const mr = mediaRecorderRef.current;
+            if (mr && mr.state !== 'inactive') {
+              mr.stop();
+              mr.stream.getTracks().forEach(t => t.stop());
+              mediaRecorderRef.current = null;
+            }
+          } catch {}
+        }}
+        recording={recording}
+        speakEnabled={speakEnabled}
+        onToggleSpeak={async () => {
+          try {
+            const next = !speakEnabled;
+            setSpeakEnabled(next);
+            if (next) {
+              // Attempt to unlock/resume speech on user gesture and give quick feedback
+              const { canSpeak, speak } = await import('@/lib/utils/speech');
+              if (!canSpeak()) {
+                pushToast('⚠️ Voice not supported in this browser');
+              } else {
+                try {
+                  await speak('Voice replies enabled');
+                } catch {
+                  // ignored; will still be enabled and speak on next reply
+                }
+              }
+            } else {
+              try {
+                const { stopSpeaking } = await import('@/lib/utils/speech');
+                stopSpeaking();
+              } catch {}
+            }
+          } catch {}
         }}
       />
 
