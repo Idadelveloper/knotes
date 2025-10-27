@@ -246,17 +246,6 @@ const MusicPlayer = ({
         >
           <BsMusicNoteBeamed size={24} />
         </button>
-        {/* Floating Settings Button (hidden while playing) */}
-        {playbackState !== 'playing' && (
-          <button
-            onClick={onTweakSettings}
-            className="fixed bottom-6 left-6 z-50 w-12 h-12 bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-purple-700 transition-colors"
-            title="Adjust music settings"
-            aria-label="Adjust music settings"
-          >
-            <BsGear />
-          </button>
-        )}
       </>
     );
   }
@@ -270,7 +259,7 @@ const MusicPlayer = ({
         <audio ref={audioRef} src={audioUrl} preload="auto" />
       )}
 
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[clamp(320px,90vw,900px)] bg-white/50 backdrop-blur-md rounded-xl border border-white/10 shadow-2xl flex flex-col overflow-hidden">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[clamp(320px,90vw,900px)] bg-white/20 backdrop-blur-md rounded-xl border border-white/10 shadow-2xl flex flex-col overflow-hidden">
         <canvas ref={canvasRef} className="absolute top-[-5px] left-0 w-full h-[30px] opacity-50 pointer-events-none" width="1000" height="40"></canvas>
 
         {/* Top row: track info + controls on the same line, with right-side tools */}
@@ -373,17 +362,6 @@ const MusicPlayer = ({
         </div>
       </div>
 
-      {/* Floating Settings Button (hidden while playing) */}
-      {playbackState !== 'playing' && (
-        <button
-          onClick={onTweakSettings}
-          className="fixed bottom-6 left-6 z-50 w-12 h-12 bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-purple-700 transition-colors"
-          title="Adjust music settings"
-          aria-label="Adjust music settings"
-        >
-          <BsGear />
-        </button>
-      )}
     </>
   );
 };

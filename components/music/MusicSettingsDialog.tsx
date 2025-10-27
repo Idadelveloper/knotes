@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { StudyMusicSettings } from '@/lib/types/music';
+import { BsXLg } from 'react-icons/bs';
 
 const GENRES = ['Lo-Fi', 'Piano', 'Ambient', 'Chillhop', 'Acoustic', 'Nature', 'Electronic'];
 const VIBES = ['Calm', 'Focused', 'Uplifting', 'Deep', 'Dreamy', 'Motivational'];
@@ -43,20 +44,20 @@ const MusicSettingsDialog = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-        <div className="relative w-[clamp(320px,90vw,500px)] max-h-[90vh] bg-gray-800/70 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl flex flex-col p-8">
-            <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors" title="Close">
-                {/* Close Icon */}
+        <div className="relative w-[clamp(320px,90vw,500px)] max-h-[90vh] bg-white/70 backdrop-blur-md rounded-2xl border border-white/20 shadow-2xl flex flex-col p-8">
+            <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/10 text-gray-700 transition-colors" title="Close" aria-label="Close settings">
+                <BsXLg />
             </button>
-            <h1 className="text-2xl font-medium text-center mb-6">Study Music Generator</h1>
+            <h1 className="text-2xl font-medium text-center mb-6 text-gray-900">Study Music Generator</h1>
 
             <div className="flex-grow overflow-y-auto pr-4 -mr-4 mb-6">
                  <div className="mb-5">
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Genre</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Genre</label>
                     <select
                         name="genre"
                         value={settings.genre}
                         onChange={(e) => handleSettingsChange('genre', e.target.value)}
-                        className="w-full bg-black/30 text-white border border-white/20 rounded-lg px-4 py-3 text-base outline-none focus:border-purple-600"
+                        className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg px-4 py-3 text-base outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-200"
                     >
                         {GENRES.map(g => <option key={g} value={g}>{g}</option>)
                         }
@@ -64,12 +65,12 @@ const MusicSettingsDialog = ({
                 </div>
                 
                 <div className="mb-5">
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Vibe / Mood</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Vibe / Mood</label>
                     <select
                         name="vibe"
                         value={settings.vibe}
                         onChange={(e) => handleSettingsChange('vibe', e.target.value)}
-                        className="w-full bg-black/30 text-white border border-white/20 rounded-lg px-4 py-3 text-base outline-none focus:border-purple-600"
+                        className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg px-4 py-3 text-base outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-200"
                     >
                         {VIBES.map(v => <option key={v} value={v}>{v}</option>)
                         }
@@ -77,7 +78,7 @@ const MusicSettingsDialog = ({
                 </div>
 
                 <div className="mb-5">
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Tempo: {settings.tempo}</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Tempo: {settings.tempo}</label>
                     <input
                         type="range"
                         name="tempo"
@@ -94,13 +95,13 @@ const MusicSettingsDialog = ({
                 </div>
 
                  <div className="mb-5">
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Energy Level</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Energy Level</label>
                     <div className="flex gap-2">
                         {ENERGY_LEVELS.map(level => (
                             <button
                                 key={level}
                                 onClick={() => handleSettingsChange('energy', level)}
-                                className={`px-4 py-2 rounded-full text-sm transition-colors ${settings.energy === level ? 'bg-purple-600 text-white' : 'bg-black/30 hover:bg-white/20'}`}>
+                                className={`px-4 py-2 rounded-full text-sm transition-colors ${settings.energy === level ? 'bg-purple-600 text-white' : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'}`}>
                                 {level}
                             </button>
                         ))}
@@ -108,13 +109,13 @@ const MusicSettingsDialog = ({
                 </div>
 
                 <div className="mb-5">
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Instrument Mix</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Instrument Mix</label>
                     <div className="flex flex-wrap gap-2">
                         {INSTRUMENTS.map(i => (
                              <button
                                 key={i}
                                 onClick={() => handleSettingsChange('instruments', i)}
-                                className={`px-4 py-2 rounded-full text-sm transition-colors ${settings.instruments.includes(i) ? 'bg-purple-600 text-white' : 'bg-black/30 hover:bg-white/20'}`}>
+                                className={`px-4 py-2 rounded-full text-sm transition-colors ${settings.instruments.includes(i) ? 'bg-purple-600 text-white' : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'}`}>
                                 {i}
                             </button>
                         ))}
