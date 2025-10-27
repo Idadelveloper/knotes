@@ -91,24 +91,29 @@ const MusicGenerator = ({ showLauncher = true, openSettingsSignal }: MusicGenera
     const ai = aiRef.current;
     const prompt = buildPrompt(newSettings);
 
-    // Generate a dynamic title with Gemini (best-effort)
+    // Generate a dynamic title using Writer API first, fall back to Gemini, then heuristic
     try {
-      if (ai) {
-        const titlePrompt = `Generate a creative, short, instrumental track title for background study music. Description: ${prompt}`;
-        // @google/genai returns a response object; use .text or first candidate
-        // Types vary by version; guard accordingly
-        // @ts-ignore
-        const res = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: titlePrompt });
-        // @ts-ignore
-        const text = typeof res.text === 'function' ? res.text() : (res.text || res.candidates?.[0]?.content?.parts?.[0]?.text || 'Generated Track');
-        setTrackTitle(String(text).replace(/"/g, ''));
-      } else {
-        setTrackTitle(`${newSettings.vibe} ${newSettings.genre}`);
+        const { generateTrackName } = await import('@/lib/writer');
+        const { title } = await generateTrackName({ description: prompt });
+        setTrackTitle(title);
+      } catch (err) {
+        console.warn('[MusicGenerator] Writer title failed, falling back:', err);
+        try {
+          if (ai) {
+            const titlePrompt = `Generate a creative, short, instrumental track title for background study music. Description: ${prompt}`;
+            // @ts-ignore
+            const res = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: titlePrompt });
+            // @ts-ignore
+            const text = typeof res.text === 'function' ? res.text() : (res.text || res.candidates?.[0]?.content?.parts?.[0]?.text || 'Generated Track');
+            setTrackTitle(String(text).replace(/"/g, ''));
+          } else {
+            setTrackTitle(`${newSettings.vibe} ${newSettings.genre}`);
+          }
+        } catch (e2) {
+          console.error('Title generation failed (fallback)', e2);
+          setTrackTitle(`${newSettings.vibe} ${newSettings.genre}`);
+        }
       }
-    } catch (err) {
-      console.error('Title generation failed', err);
-      setTrackTitle(`${newSettings.vibe} ${newSettings.genre}`);
-    }
 
     // Start live AI generation via Lyria
     try {
