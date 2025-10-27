@@ -6,6 +6,7 @@ import HighlightToolbar from "@/components/HighlightToolbar";
 import { HiOutlineX } from "react-icons/hi";
 import ChatPanel from "@/components/ChatPanel";
 import { useRouter } from "next/navigation";
+import MusicGenerator from "@/components/music/MusicGenerator";
 import { useAuth } from "@/components/AuthProvider";
 import { getGeminiModel } from "@/lib/ai";
 import { translateText } from "@/lib/translate";
@@ -1277,6 +1278,11 @@ export default function StudyWorkspace() {
             {t.message}
           </div>
         ))}
+      </div>
+
+      {/* Music generator launcher button at bottom-left */}
+      <div className="fixed bottom-6 left-6 z-50">
+        <MusicGenerator />
       </div>
     </main>
   );

@@ -1,8 +1,8 @@
 
 "use client";
 import { useState } from "react";
-import MusicSettingsDialog from "./MusicSettingsDialog.js";
-import MusicPlayer from "./MusicPlayer.js";
+import MusicSettingsDialog from "./MusicSettingsDialog";
+import MusicPlayer from "./MusicPlayer";
 import { StudyMusicSettings, PlaybackState } from "@/lib/types/music";
 
 const MusicGenerator = () => {
@@ -21,6 +21,7 @@ const MusicGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentSettings, setCurrentSettings] =
     useState<StudyMusicSettings | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | undefined>(undefined);
 
   const handleGenerate = (newSettings: StudyMusicSettings) => {
     setSettings(newSettings);
@@ -29,6 +30,8 @@ const MusicGenerator = () => {
     // Simulate music generation
     setTimeout(() => {
       setTrackTitle(`Generated Track - ${newSettings.genre}`);
+      // Use a sample audio URL to simulate generated music
+      setAudioUrl("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3");
       setIsGenerating(false);
       setPlaybackState("playing");
       setView("player");
@@ -82,6 +85,7 @@ const MusicGenerator = () => {
         trackTitle={trackTitle}
         playbackState={playbackState}
         isGenerating={isGenerating}
+        audioUrl={audioUrl}
         onPlayPause={handlePlayPause}
         onStop={handleStop}
         onTweakSettings={handleTweakSettings}
