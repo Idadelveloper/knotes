@@ -393,7 +393,23 @@ export default function StudyWorkspace() {
   // Floating toolbar action handlers
   const handleExplain = () => {
     setToolbarVisible(false);
-    runAI("explain");
+    const text = (selectedText || '').trim();
+    if (!text) {
+      pushToast('👆 Highlight some text first, then tap Explain.');
+      return;
+    }
+    const MAX = 1500;
+    const isLong = text.length > MAX;
+    const excerpt = isLong ? text.slice(0, MAX) + '…' : text;
+
+    // Open chat and immediately send a context-rich explanation prompt
+    setChatOpen(true);
+
+    const userPrompt = `Explain the following highlighted passage in clear, student-friendly terms. Use my current notes as primary context, and include:\n- A concise overview in 2–3 sentences\n- Step-by-step reasoning or derivation if applicable\n- A simple example or analogy\n- 5–10 key takeaways as bullet points\nIf math is present, format formulas clearly.\n\nHighlighted passage:\n"""\n${excerpt}\n"""${isLong ? '\n\n(Note: Excerpt truncated for length.)' : ''}`;
+
+    // Clear any draft and send now
+    try { setChatInput(''); } catch {}
+    sendChat(userPrompt);
   };
   const handleSimplify = () => {
     setToolbarVisible(false);
