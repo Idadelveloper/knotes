@@ -1,0 +1,45 @@
+html, body {
+  height: 100%;
+  margin: 0;
+}
+body {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+  background-color: #121212;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image:
+    radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0px, transparent 50%),
+    radial-gradient(at 98% 1%, hsla(240, 21%, 8%, 1) 0px, transparent 50%);
+}
+body.dragging {
+  cursor: ns-resize;
+}
+body.dragging * {
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #2a2a2a;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+/* Custom form controls */
+select, button {
+  font-family: 'Google Sans', sans-serif;
+}

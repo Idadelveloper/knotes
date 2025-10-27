@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaPlay, FaPause, FaStepForward, FaStepBackward, FaVolumeUp, FaSearch, FaBrain, FaGlobe, FaPenFancy, FaCopy, FaChevronDown, FaChevronRight, FaDownload, FaMagic, FaVolumeUp as FaVolume, FaCloudUploadAlt, FaMusic, FaChartBar, FaQuestionCircle, FaClock, FaComments } from "react-icons/fa";
 import HighlightToolbar from "@/components/HighlightToolbar";
-import MusicDock from "@/components/MusicDock";
 import { HiOutlineX } from "react-icons/hi";
 import ChatPanel from "@/components/ChatPanel";
 import { useRouter } from "next/navigation";
@@ -946,21 +945,6 @@ export default function StudyWorkspace() {
             setChatTyping(false);
           }, 600);
         }}
-      />
-
-      {/* Bottom Music Dock */}
-      <MusicDock
-        isPlaying={isPlaying}
-        volume={volume}
-        genre={genre}
-        onPlayPause={() => setIsPlaying((p) => !p)}
-        onPrev={() => pushToast("⏮️ Replaying previous")}
-        onNext={() => pushToast("⏭️ Skipping to next")}
-        onVolume={(v) => setVolume(v)}
-        onGenre={(g) => setGenre(g)}
-        onRegen={() => pushToast(`✨ Regenerating ${genre} soundtrack…`)}
-        onDownload={() => pushToast("⬇️ Download started")}
-        onConvert={() => pushToast(`🎼 Converting notes to ${genre} track…`)}
       />
 
       {/* Timer Settings Modal */}
