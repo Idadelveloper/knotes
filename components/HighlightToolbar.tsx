@@ -1,19 +1,17 @@
 "use client";
 
-import { FaBrain, FaPenFancy, FaVolumeUp, FaMusic, FaSearch } from "react-icons/fa";
+import { FaBrain, FaVolumeUp, FaSearch } from "react-icons/fa";
 
 export type HighlightToolbarProps = {
   visible: boolean;
   x: number;
   y: number;
   onExplain: () => void;
-  onSimplify: () => void;
   onRead: () => void;
-  onConvertMusic: () => void;
   onSearch: () => void;
 };
 
-export default function HighlightToolbar({ visible, x, y, onExplain, onSimplify, onRead, onConvertMusic, onSearch }: HighlightToolbarProps) {
+export default function HighlightToolbar({ visible, x, y, onExplain, onRead, onSearch }: HighlightToolbarProps) {
   if (!visible) return null;
   return (
     <div
@@ -31,24 +29,10 @@ export default function HighlightToolbar({ visible, x, y, onExplain, onSimplify,
       </button>
       <button
         className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-slate-800 dark:text-[--color-accent] hover:bg-black/5 dark:hover:bg-white/10 text-xs"
-        title="Simplify"
-        onClick={onSimplify}
-      >
-        <FaPenFancy /> <span className="hidden sm:inline">Simplify</span>
-      </button>
-      <button
-        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-slate-800 dark:text-[--color-accent] hover:bg-black/5 dark:hover:bg-white/10 text-xs"
         title="Read"
         onClick={onRead}
       >
         <FaVolumeUp /> <span className="hidden sm:inline">Read</span>
-      </button>
-      <button
-        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-slate-800 dark:text-[--color-accent] hover:bg-black/5 dark:hover:bg-white/10 text-xs"
-        title="Convert to Music"
-        onClick={onConvertMusic}
-      >
-        <FaMusic /> <span className="hidden sm:inline">Music</span>
       </button>
       <button
         className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-slate-800 dark:text-[--color-accent] hover:bg-black/5 dark:hover:bg-white/10 text-xs"

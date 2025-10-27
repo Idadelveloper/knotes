@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FaPlay, FaPause, FaStepForward, FaStepBackward, FaVolumeUp, FaSearch, FaBrain, FaGlobe, FaPenFancy, FaCopy, FaChevronDown, FaChevronRight, FaDownload, FaMagic, FaVolumeUp as FaVolume, FaCloudUploadAlt, FaMusic, FaChartBar, FaQuestionCircle, FaClock } from "react-icons/fa";
+import { FaPlay, FaPause, FaStepForward, FaStepBackward, FaVolumeUp, FaSearch, FaBrain, FaGlobe, FaPenFancy, FaCopy, FaChevronDown, FaChevronRight, FaDownload, FaMagic, FaVolumeUp as FaVolume, FaCloudUploadAlt, FaMusic, FaChartBar, FaQuestionCircle, FaClock, FaComments } from "react-icons/fa";
 import HighlightToolbar from "@/components/HighlightToolbar";
 import MusicDock from "@/components/MusicDock";
 import { HiOutlineX } from "react-icons/hi";
@@ -25,16 +25,34 @@ export default function StudyWorkspace() {
   const [aiTab, setAiTab] = useState<"explain" | "summarize" | "translate" | "rewrite">("explain");
   const [aiOutput, setAiOutput] = useState<string>("");
 
-  // Sidebar collapsibles
-  const [openPanels, setOpenPanels] = useState<{ [k: string]: boolean }>({
-    quick: true,
-    notes: true,
-    search: false,
-  });
+  // Sidebar collapsibles (removed old right panel)
+  const [openPanels, setOpenPanels] = useState<{ [k: string]: boolean }>({});
 
   // Music dock state
   const [isPlaying, setIsPlaying] = useState(true);
   const [volume, setVolume] = useState(0.7);
+
+  // Chatbot UI state
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([
+    { role: 'ai', text: "Hi! I’m your study assistant. Ask me to explain, summarize, or quiz you based on your notes." }
+  ]);
+
+  const sendChat = () => {
+    const text = chatInput.trim();
+    if (!text) return;
+    setChatMessages((m) => [...m, { role: 'user', text }]);
+    setChatInput("");
+    // Simple mock response using selectedText context if exists
+    const context = selectedText?.trim() ? `Regarding your selection: "${selectedText.slice(0, 200)}"` : "";
+    setTimeout(() => {
+      setChatMessages((m) => [
+        ...m,
+        { role: 'ai', text: `Here’s a helpful note. ${context} — This is a placeholder response you can wire to AI later.` },
+      ]);
+    }, 600);
+  };
 
   // Assistant + selection state
   const [assistantOpen, setAssistantOpen] = useState(false);
@@ -439,24 +457,22 @@ export default function StudyWorkspace() {
         x={toolbarPos.x}
         y={toolbarPos.y}
         onExplain={handleExplain}
-        onSimplify={handleSimplify}
         onRead={handleRead}
-        onConvertMusic={handleConvertMusic}
         onSearch={handleSearch}
       />
 
       {/* Main card with two-column grid */}
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 pb-6">
         <div className="bg-white rounded-2xl shadow-lg p-8 ring-1 ring-black/5">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Notes Editor (2 cols) */}
-            <section className="lg:col-span-2">
+          <div className="grid grid-cols-1 gap-8">
+            {/* Notes Editor (full width, scrollable view) */}
+            <section className="">
               <h2 className="text-xl font-semibold mb-4 text-slate-900">{notesTitle}</h2>
               <div
                 ref={editorRef}
                 contentEditable
                 suppressContentEditableWarning
-                className="min-h-[500px] rounded-xl border border-gray-200 p-4 leading-7 text-slate-900 outline-none focus:ring-2 focus:ring-primary"
+                className="min-h-[500px] max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 p-4 leading-7 text-slate-900 outline-none focus:ring-2 focus:ring-primary"
                 onInput={() => {}}
               >
                 <p><strong>The Mitochondrion: Powerhouse of the Cell</strong> — <span className="bg-blue-200/50">Mitochondria generate ATP through cellular respiration</span>, providing energy needed for cellular processes.</p>
@@ -466,47 +482,65 @@ export default function StudyWorkspace() {
               </div>
             </section>
 
-            {/* AI Assistant (1 col) */}
-            <aside className="lg:col-span-1">
-              <h3 className="sr-only">AI Assistant</h3>
-              {/* Tabs */}
-              <div className="flex gap-4 border-b border-gray-200 text-sm font-medium">
-                {([
-                  { key: 'explain', label: 'Explain' },
-                  { key: 'simplify', label: 'Simplify' },
-                  { key: 'summarize', label: 'Summarize' },
-                  { key: 'translate', label: 'Translate' },
-                  { key: 'read', label: 'Read Aloud' },
-                ] as const).map(t => (
-                  <button
-                    key={t.key}
-                    className={`pb-2 -mb-px border-b-2 ${assistantTab === t.key ? 'border-blue-500 text-blue-500' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-                    onClick={() => setAssistantTab(t.key as typeof assistantTab)}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Content Panel */}
-              <div className="mt-4 text-sm text-slate-800">
-                {selectedText.trim().length === 0 ? (
-                  <p className="text-gray-600">The AI Assistant is ready. Highlight text in your notes to see an explanation appear here.</p>
-                ) : (
-                  <div>
-                    <h4 className="font-semibold mb-2">Explanation of Highlighted Text</h4>
-                    <p className="mb-3">This passage describes how mitochondria act as energy centers of the cell by producing ATP through respiration. The highlighted portion emphasizes their key role in powering cellular activities.</p>
-                    <ul className="list-disc pl-5 space-y-1">
-                      <li><strong>Microsporidia</strong>: Highly reduced parasites that have minimalistic organelles due to their intracellular lifestyle.</li>
-                      <li><strong>Monocercomonoides</strong>: An organism reported to lack conventional mitochondria, relying on alternative biochemical pathways.</li>
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </aside>
           </div>
         </div>
       </div>
+
+      {/* Floating Chat FAB */}
+      <button
+        onClick={() => setChatOpen(true)}
+        className="fixed bottom-28 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-slate-900 font-medium shadow-[0_8px_16px_rgba(0,0,0,0.15)] hover:brightness-105 active:translate-y-px"
+        title="Open chat assistant"
+      >
+        <FaComments /> Chat
+      </button>
+
+      {/* Fixed Chat Panel */}
+      {chatOpen && (
+        <div className="fixed top-24 bottom-28 right-4 z-40 w-[88vw] max-w-md rounded-2xl bg-white/95 dark:bg-[--color-dark-bg]/95 ring-1 ring-black/10 dark:ring-white/10 shadow-2xl flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-black/10 dark:border-white/10">
+            <div className="flex items-center gap-2 text-slate-900 dark:text-[--color-accent]">
+              <FaComments />
+              <span className="font-semibold">Study Assistant</span>
+            </div>
+            <button
+              aria-label="Close chat"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md ring-1 ring-black/10 dark:ring-white/10 bg-white/70 dark:bg-white/10 hover:bg-white/90"
+              onClick={() => setChatOpen(false)}
+            >
+              <HiOutlineX size={16} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+            {chatMessages.map((m, idx) => (
+              <div key={idx} className={`max-w-[85%] ${m.role === 'user' ? 'ml-auto' : ''}`}>
+                <div className={`rounded-2xl px-3 py-2 text-sm leading-6 ${m.role === 'user' ? 'bg-primary text-slate-900' : 'bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200'}`}>
+                  {m.text}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="px-3 pb-3 pt-2 border-t border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur">
+            <form
+              onSubmit={(e) => { e.preventDefault(); sendChat(); }}
+              className="flex items-center gap-2"
+            >
+              <input
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                className="flex-1 rounded-xl bg-white/90 dark:bg-white/10 text-slate-900 dark:text-[--color-accent] ring-1 ring-black/10 dark:ring-white/10 px-3 py-2 outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Ask something about your notes…"
+              />
+              <button
+                type="submit"
+                className="rounded-xl bg-secondary text-slate-900 font-medium px-4 py-2 shadow hover:brightness-105"
+              >
+                Send
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Music Dock */}
       <MusicDock
