@@ -5,13 +5,17 @@ import { FaPlay, FaPause, FaStepForward, FaStepBackward, FaVolumeUp, FaSearch, F
 import HighlightToolbar from "@/components/HighlightToolbar";
 import MusicDock from "@/components/MusicDock";
 import { HiOutlineX } from "react-icons/hi";
+import ChatPanel from "@/components/ChatPanel";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
 
 // Simple toast system
 type Toast = { id: number; message: string };
 
 export default function StudyWorkspace() {
   const router = useRouter();
+  const { user } = useAuth();
+  const userDisplay = (user?.displayName || user?.email || 'You') as string;
   // Editor refs/state
   const editorRef = useRef<HTMLDivElement | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
@@ -33,11 +37,12 @@ export default function StudyWorkspace() {
   const [volume, setVolume] = useState(0.7);
 
   // Chatbot UI state
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(true);
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([
     { role: 'ai', text: "Hi! I’m your study assistant. Ask me to explain, summarize, or quiz you based on your notes." }
   ]);
+  const [chatTyping, setChatTyping] = useState(false);
 
   const sendChat = () => {
     const text = chatInput.trim();
@@ -495,52 +500,28 @@ export default function StudyWorkspace() {
         <FaComments /> Chat
       </button>
 
-      {/* Fixed Chat Panel */}
-      {chatOpen && (
-        <div className="fixed top-24 bottom-28 right-4 z-40 w-[88vw] max-w-md rounded-2xl bg-white/95 dark:bg-[--color-dark-bg]/95 ring-1 ring-black/10 dark:ring-white/10 shadow-2xl flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-black/10 dark:border-white/10">
-            <div className="flex items-center gap-2 text-slate-900 dark:text-[--color-accent]">
-              <FaComments />
-              <span className="font-semibold">Study Assistant</span>
-            </div>
-            <button
-              aria-label="Close chat"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md ring-1 ring-black/10 dark:ring-white/10 bg-white/70 dark:bg-white/10 hover:bg-white/90"
-              onClick={() => setChatOpen(false)}
-            >
-              <HiOutlineX size={16} />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-            {chatMessages.map((m, idx) => (
-              <div key={idx} className={`max-w-[85%] ${m.role === 'user' ? 'ml-auto' : ''}`}>
-                <div className={`rounded-2xl px-3 py-2 text-sm leading-6 ${m.role === 'user' ? 'bg-primary text-slate-900' : 'bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200'}`}>
-                  {m.text}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="px-3 pb-3 pt-2 border-t border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur">
-            <form
-              onSubmit={(e) => { e.preventDefault(); sendChat(); }}
-              className="flex items-center gap-2"
-            >
-              <input
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                className="flex-1 rounded-xl bg-white/90 dark:bg-white/10 text-slate-900 dark:text-[--color-accent] ring-1 ring-black/10 dark:ring-white/10 px-3 py-2 outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Ask something about your notes…"
-              />
-              <button
-                type="submit"
-                className="rounded-xl bg-secondary text-slate-900 font-medium px-4 py-2 shadow hover:brightness-105"
-              >
-                Send
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      <ChatPanel
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        messages={chatMessages}
+        typing={chatTyping}
+        botName="Knotes AI"
+        botAvatarUrl="https://chatscope.io/storybook/react/assets/zoe-E7ZdmXF0.svg"
+        userName={userDisplay}
+        userAvatarUrl=""
+        onSend={(text) => {
+          setChatMessages((m) => [...m, { role: 'user', text }]);
+          setChatTyping(true);
+          const context = selectedText?.trim() ? `Regarding your selection: "${selectedText.slice(0, 200)}"` : "";
+          setTimeout(() => {
+            setChatMessages((m) => [
+              ...m,
+              { role: 'ai', text: `Here’s a helpful note. ${context} — This is a placeholder response you can wire to AI later.` },
+            ]);
+            setChatTyping(false);
+          }, 600);
+        }}
+      />
 
       {/* Bottom Music Dock */}
       <MusicDock

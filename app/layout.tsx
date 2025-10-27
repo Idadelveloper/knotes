@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import PWA from "../components/PWA";
