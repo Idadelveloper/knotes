@@ -93,6 +93,9 @@ export default function StudyWorkspace() {
   const [notesLoading, setNotesLoading] = useState<false | "summarize" | "translate">(false);
   const [notesError, setNotesError] = useState<string>("");
   const [ttsSpeaking, setTtsSpeaking] = useState<boolean>(false);
+  // Persistent notes content (HTML) and edit mode
+  const [notesContentHtml, setNotesContentHtml] = useState<string>("");
+  const [isEditingNotes, setIsEditingNotes] = useState<boolean>(false);
   // Keep a mirror of the editor text so features work even when the editor DOM isn't mounted
   const [editorText, setEditorText] = useState<string>("");
   // Translate settings
@@ -152,23 +155,33 @@ export default function StudyWorkspace() {
     if (savedTitle) setNotesTitle(savedTitle);
 
     const payload = structured && structured.trim().length > 0 ? structured : extracted;
-    if (payload && editorRef.current) {
+    if (payload) {
       // Prefer to render simple markdown for better readability
       const html = mdToHtml(payload);
       if (html && /<\w+/.test(html)) {
-        editorRef.current.innerHTML = html;
-        setEditorText(editorRef.current.innerText.trim());
+        setNotesContentHtml(html);
+        // temporarily create a div to get plain text
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        setEditorText((tmp.innerText || tmp.textContent || '').trim());
       } else {
-        editorRef.current.innerText = payload;
+        const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        setNotesContentHtml(`<p>${esc(payload)}</p>`);
         setEditorText(payload.trim());
       }
       sessionStorage.removeItem(structuredKey);
       sessionStorage.removeItem(extractedKey);
       sessionStorage.removeItem(titleKey);
-      try { console.log("[Study] Injected notes into editor."); } catch {}
-    } else if (editorRef.current) {
-      // No session payload—mirror whatever default content is rendered
-      setEditorText((editorRef.current.innerText || editorRef.current.textContent || "").trim());
+      try { console.log("[Study] Loaded notes into state."); } catch {}
+    } else {
+      // Seed with default example content if nothing provided
+      const defaultHtml = `<p><strong>The Mitochondrion: Powerhouse of the Cell</strong> — <span class=\"bg-blue-200/50\">Mitochondria generate ATP through cellular respiration</span>, providing energy needed for cellular processes.</p>
+<p class=\"mt-3\">They have a double membrane, their own DNA, and play roles in apoptosis and calcium storage.</p>
+<p class=\"mt-3\">In some organisms, organelles and pathways can be highly reduced or even lost due to parasitic or anaerobic lifestyles.</p>`;
+      setNotesContentHtml(defaultHtml);
+      const tmp = document.createElement('div');
+      tmp.innerHTML = defaultHtml;
+      setEditorText((tmp.innerText || tmp.textContent || '').trim());
     }
   }, []);
 
@@ -227,32 +240,46 @@ export default function StudyWorkspace() {
     };
   }, []);
 
-  // Insert text back into editor at savedRange
+  // Insert text back into notes. If editing, insert at caret; otherwise append to saved HTML state.
   const insertIntoNotes = (text: string) => {
     const editor = editorRef.current;
-    if (!editor) return;
-    editor.focus();
-
-    const sel = window.getSelection();
-    if (savedRangeRef.current) {
-      sel?.removeAllRanges();
-      sel?.addRange(savedRangeRef.current);
+    if (isEditingNotes && editor) {
+      editor.focus();
+      const sel = window.getSelection();
+      if (savedRangeRef.current) {
+        sel?.removeAllRanges();
+        sel?.addRange(savedRangeRef.current);
+      }
+      const range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+      if (range) {
+        range.deleteContents();
+        const node = document.createTextNode(text);
+        range.insertNode(node);
+        // move caret after inserted node
+        range.setStartAfter(node);
+        range.setEndAfter(node);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      } else {
+        // append to end if no range
+        editor.append(text);
+      }
+      // update mirrors
+      setEditorText((editor.innerText || editor.textContent || '').trim());
+      setNotesContentHtml(editor.innerHTML);
+      pushToast("✅ Inserted into notes");
+      return;
     }
-    const range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
-    if (range) {
-      range.deleteContents();
-      const node = document.createTextNode(text);
-      range.insertNode(node);
-      // move caret after inserted node
-      range.setStartAfter(node);
-      range.setEndAfter(node);
-      sel?.removeAllRanges();
-      sel?.addRange(range);
-    } else {
-      // append to end if no range
-      editor.append(text);
-    }
-    pushToast("✅ Inserted into notes");
+    // Not editing: append to persistent HTML content
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const toHtml = (t: string) => t
+      .split(/\n+/)
+      .map(l => `<p>${esc(l)}</p>`) 
+      .join('');
+    setNotesContentHtml(prev => (prev || '') + toHtml(text));
+    // update plain mirror
+    setEditorText(prev => (prev ? prev + '\n' + text.trim() : text.trim()));
+    pushToast("✅ Added to notes");
   };
 
   // Handle AI actions (mock)
@@ -378,12 +405,21 @@ export default function StudyWorkspace() {
     return () => clearInterval(id);
   }, [isTimerRunning]);
 
-  // Helpers to get plain text from editor
+  // Helpers to get plain text from editor/state
+  const htmlToPlainText = (html: string) => {
+    const tmp = typeof document !== 'undefined' ? document.createElement('div') : null;
+    if (!tmp) return html;
+    tmp.innerHTML = html;
+    return (tmp.innerText || tmp.textContent || '').trim();
+  };
   const getEditorPlainText = () => {
     const el = editorRef.current;
-    // Prefer innerText to strip any HTML formatting; fall back to mirrored state when editor DOM isn't mounted
-    const domText = el ? (el.innerText || el.textContent || "").trim() : "";
-    return domText || editorText.trim();
+    if (isEditingNotes && el) {
+      return (el.innerText || el.textContent || '').trim();
+    }
+    // Not editing: rely on saved HTML content
+    if (notesContentHtml) return htmlToPlainText(notesContentHtml);
+    return editorText.trim();
   };
 
   // Generate a concise summary using Gemini
@@ -611,17 +647,62 @@ export default function StudyWorkspace() {
 
               {/* Content: switch by tab */}
               {notesTab === 'original' && (
-                <div
-                  ref={editorRef}
-                  contentEditable
-                  suppressContentEditableWarning
-                  className="min-h-[500px] max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 p-4 leading-7 text-slate-900 outline-none focus:ring-2 focus:ring-primary"
-                  onInput={() => { setEditorText(getEditorPlainText()); }}
-                >
-                  <p><strong>The Mitochondrion: Powerhouse of the Cell</strong> — <span className="bg-blue-200/50">Mitochondria generate ATP through cellular respiration</span>, providing energy needed for cellular processes.</p>
-                  <p className="mt-3">They have a double membrane, their own DNA, and play roles in apoptosis and calcium storage.</p>
-                  <p className="mt-3">In some organisms, organelles and pathways can be highly reduced or even lost due to parasitic or anaerobic lifestyles.</p>
-                  <p className="mt-6 text-gray-400 select-none">Paste your notes here to get started...</p>
+                <div>
+                  {/* Controls: Edit/Save/Cancel */}
+                  <div className="mb-2 flex items-center gap-2 justify-end">
+                    {!isEditingNotes ? (
+                      <button
+                        className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-black/10 px-3 py-1.5 text-slate-800 hover:bg-white/80"
+                        onClick={() => {
+                          setIsEditingNotes(true);
+                          // sync DOM with saved HTML after next paint
+                          setTimeout(() => {
+                            if (editorRef.current) {
+                              editorRef.current.innerHTML = notesContentHtml || '';
+                            }
+                          }, 0);
+                        }}
+                      >
+                        Edit
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-slate-900"
+                          onClick={() => {
+                            const el = editorRef.current;
+                            const html = el ? el.innerHTML : notesContentHtml;
+                            const plain = el ? (el.innerText || el.textContent || '').trim() : editorText;
+                            setNotesContentHtml(html || '');
+                            setEditorText(plain);
+                            setIsEditingNotes(false);
+                            pushToast('💾 Notes saved');
+                          }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-black/10 px-3 py-1.5 text-slate-800 hover:bg-white/80"
+                          onClick={() => {
+                            setIsEditingNotes(false);
+                            // revert DOM to saved HTML
+                            if (editorRef.current) editorRef.current.innerHTML = notesContentHtml || '';
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  <div
+                    ref={editorRef}
+                    contentEditable={isEditingNotes}
+                    suppressContentEditableWarning
+                    className={`min-h-[500px] max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 p-4 leading-7 text-slate-900 outline-none ${isEditingNotes ? 'focus:ring-2 focus:ring-primary' : 'bg-white'}`}
+                    onInput={() => { if (isEditingNotes) setEditorText(getEditorPlainText()); }}
+                    dangerouslySetInnerHTML={{ __html: notesContentHtml || '<p class="text-gray-400 select-none">Paste your notes here to get started...</p>' }}
+                  />
                 </div>
               )}
 
