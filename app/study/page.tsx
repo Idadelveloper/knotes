@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { getGeminiModel } from "@/lib/ai";
 import { translateText } from "@/lib/translate";
+import { summarizeText, isSummarizerAvailable } from "@/lib/summarize";
 import { promptWithNotes } from "@/lib/prompt";
 import MarkdownViewer from "@/components/MarkdownViewer";
 import MDEditor from "@uiw/react-md-editor";
@@ -122,6 +123,20 @@ export default function StudyWorkspace() {
   const [translateLang, setTranslateLang] = useState<string>("es");
   const [translatorDownloading, setTranslatorDownloading] = useState<boolean>(false);
   const [translatorProgress, setTranslatorProgress] = useState<number | null>(null);
+
+  // Summarize settings (built-in Summarizer API or Gemini fallback)
+  const [summarizeType, setSummarizeType] = useState<'key-points' | 'tldr' | 'teaser' | 'headline'>('key-points');
+  const [summarizeFormat, setSummarizeFormat] = useState<'markdown' | 'plain-text'>('markdown');
+  const [summarizeLength, setSummarizeLength] = useState<'short' | 'medium' | 'long'>('medium');
+  const [sharedContext, setSharedContext] = useState<string>("");
+  const [requestContext, setRequestContext] = useState<string>("");
+  const [expectedInputLanguages, setExpectedInputLanguages] = useState<string>("en");
+  const [expectedContextLanguages, setExpectedContextLanguages] = useState<string>("en");
+  const [outputLanguage, setOutputLanguage] = useState<string>("");
+  const [summarizerAvailable, setSummarizerAvailable] = useState<boolean | null>(null);
+  const [summarizerDownloading, setSummarizerDownloading] = useState<boolean>(false);
+  const [summarizerProgress, setSummarizerProgress] = useState<number | null>(null);
+  const [summaryUsedEngine, setSummaryUsedEngine] = useState<'summarizer' | 'gemini' | ''>('');
 
   // Toasts
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -489,7 +504,7 @@ export default function StudyWorkspace() {
     return editorText.trim();
   };
 
-  // Generate a concise summary using Gemini
+  // Generate a summary using built-in Summarizer API (with fallback) using lib/summarize
   const summarizeNotes = async () => {
     const text = getEditorPlainText();
     if (!text) {
@@ -499,13 +514,39 @@ export default function StudyWorkspace() {
     try {
       setNotesError("");
       setNotesLoading("summarize");
-      const model = getGeminiModel();
-      const prompt = `Summarize the following study notes into a concise paragraph and 3-5 bullet points. Keep it accurate and clear.\n\nNotes:\n"""\n${text}\n"""`;
-      const res = await model.generateContent(prompt);
-      const out = res?.response?.text?.() ?? "";
-      setSummaryText(out.trim() || "(No summary generated)");
+      setSummarizerProgress(null);
+      setSummarizerDownloading(false);
+      setSummaryUsedEngine('');
+
+      const parseCsv = (s: string) => (s || '')
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean);
+
+      const result = await summarizeText(text, {
+        type: summarizeType,
+        format: summarizeFormat,
+        length: summarizeLength,
+        sharedContext: sharedContext || undefined,
+        context: requestContext || undefined,
+        expectedInputLanguages: parseCsv(expectedInputLanguages),
+        expectedContextLanguages: parseCsv(expectedContextLanguages),
+        outputLanguage: outputLanguage || undefined,
+        onDownloadStart() {
+          setSummarizerDownloading(true);
+        },
+        onDownloadProgress(loaded) {
+          setSummarizerProgress(typeof loaded === 'number' ? loaded : null);
+        },
+      });
+
+      setSummaryText(result.text || '(No summary generated)');
+      setSummaryUsedEngine(result.used);
+      setSummarizerDownloading(false);
+      setSummarizerProgress(null);
+      try { console.log(`[Summarize] Used: ${result.used}`); } catch {}
     } catch (e: any) {
-      setNotesError(e?.message || "Failed to generate summary.");
+      setNotesError(e?.message || 'Failed to summarize notes.');
     } finally {
       setNotesLoading(false);
     }
@@ -577,11 +618,20 @@ export default function StudyWorkspace() {
     } catch {}
   };
 
-  // Auto-run generators on first switch
+  // Auto-run settings on tab switch (no auto-summarize; require explicit click)
   useEffect(() => {
-    if (notesTab === "summarize" && !summaryText && !notesLoading) summarizeNotes();
-    // Do not auto-run translate; user selects a language first and clicks Translate
-    if (notesTab !== "voice") stopSpeak();
+    if (notesTab === 'summarize') {
+      // Check availability when entering the tab
+      (async () => {
+        try {
+          const ok = await isSummarizerAvailable();
+          setSummarizerAvailable(ok);
+        } catch {
+          setSummarizerAvailable(false);
+        }
+      })();
+    }
+    if (notesTab !== 'voice') stopSpeak();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notesTab]);
 
@@ -817,18 +867,106 @@ export default function StudyWorkspace() {
               )}
 
               {notesTab === 'summarize' && (
-                <div className="min-h-[300px] max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 p-4 bg-white/70">
-                  {notesLoading === 'summarize' ? (
-                    <p className="text-slate-700">Summarizing…</p>
-                  ) : notesError ? (
-                    <p className="text-red-600">{notesError}</p>
-                  ) : (
-                    <article className="prose prose-slate max-w-none">
-                      <pre className="whitespace-pre-wrap text-slate-900">{summaryText || "Switch to Original and add some notes, or click Summarize again."}</pre>
-                    </article>
-                  )}
+                <div className="rounded-xl border border-gray-200 p-4 bg-white/70">
+                  {/* Controls */}
+                  <div className="flex flex-col gap-3 md:flex-row md:items-end">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
+                        <select className="w-full rounded-lg bg-white ring-1 ring-black/10 px-3 py-2 text-slate-800" value={summarizeType} onChange={(e) => setSummarizeType((e.target as HTMLSelectElement).value as any)}>
+                          <option value="key-points">Key points</option>
+                          <option value="tldr">TL;DR</option>
+                          <option value="teaser">Teaser</option>
+                          <option value="headline">Headline</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Format</label>
+                        <select className="w-full rounded-lg bg-white ring-1 ring-black/10 px-3 py-2 text-slate-800" value={summarizeFormat} onChange={(e) => setSummarizeFormat((e.target as HTMLSelectElement).value as any)}>
+                          <option value="markdown">Markdown</option>
+                          <option value="plain-text">Plain text</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Length</label>
+                        <select className="w-full rounded-lg bg-white ring-1 ring-black/10 px-3 py-2 text-slate-800" value={summarizeLength} onChange={(e) => setSummarizeLength((e.target as HTMLSelectElement).value as any)}>
+                          <option value="short">Short</option>
+                          <option value="medium">Medium</option>
+                          <option value="long">Long</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-slate-900 disabled:opacity-60"
+                        disabled={notesLoading === 'summarize'}
+                        onClick={summarizeNotes}
+                        title="Generate summary"
+                      >
+                        {notesLoading === 'summarize' ? 'Summarizing…' : 'Generate Summary'}
+                      </button>
+                      <button
+                        className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-black/10 px-4 py-2 text-slate-800"
+                        onClick={() => { setSummaryText(''); setNotesError(''); setSummaryUsedEngine(''); }}
+                        title="Clear summary"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Advanced context and languages */}
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Shared context (optional)</label>
+                      <input className="w-full rounded-lg bg-white ring-1 ring-black/10 px-3 py-2 text-slate-800" placeholder="e.g., This is a scientific article" value={sharedContext} onChange={(e) => setSharedContext((e.target as HTMLInputElement).value)} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Request context (optional)</label>
+                      <input className="w-full rounded-lg bg-white ring-1 ring-black/10 px-3 py-2 text-slate-800" placeholder="e.g., Audience is junior developers" value={requestContext} onChange={(e) => setRequestContext((e.target as HTMLInputElement).value)} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Expected input languages (CSV)</label>
+                      <input className="w-full rounded-lg bg-white ring-1 ring-black/10 px-3 py-2 text-slate-800" placeholder="en,ja,es" value={expectedInputLanguages} onChange={(e) => setExpectedInputLanguages((e.target as HTMLInputElement).value)} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Expected context languages (CSV)</label>
+                      <input className="w-full rounded-lg bg-white ring-1 ring-black/10 px-3 py-2 text-slate-800" placeholder="en" value={expectedContextLanguages} onChange={(e) => setExpectedContextLanguages((e.target as HTMLInputElement).value)} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Output language (optional)</label>
+                      <input className="w-full rounded-lg bg-white ring-1 ring-black/10 px-3 py-2 text-slate-800" placeholder="e.g., es" value={outputLanguage} onChange={(e) => setOutputLanguage((e.target as HTMLInputElement).value)} />
+                    </div>
+                  </div>
+
+                  {/* Availability / download status */}
+                  <div className="mt-2 text-xs text-slate-600">
+                    {summarizerAvailable === null ? (
+                      <span>Checking Summarizer support…</span>
+                    ) : summarizerAvailable ? (
+                      <span>Built-in Summarizer API detected. {summarizerDownloading ? `Downloading model… ${Math.round((summarizerProgress || 0) * 100)}%` : ''}</span>
+                    ) : (
+                      <span>Summarizer API not available. Falling back to Gemini automatically.</span>
+                    )}
+                    {summaryUsedEngine && (
+                      <span className="ml-2">Last run via: <strong>{summaryUsedEngine}</strong></span>
+                    )}
+                  </div>
+
+                  {/* Output */}
+                  <div className="mt-4 min-h-[200px] max-h-[40vh] overflow-y-auto rounded-xl border border-gray-200 p-4 bg-white">
+                    {notesLoading === 'summarize' ? (
+                      <p className="text-slate-700">Summarizing…</p>
+                    ) : notesError ? (
+                      <p className="text-red-600">{notesError}</p>
+                    ) : (
+                      <article className="prose prose-slate max-w-none">
+                        <pre className="whitespace-pre-wrap text-slate-900">{summaryText || 'Adjust settings above, then click Generate Summary.'}</pre>
+                      </article>
+                    )}
+                  </div>
                   <div className="mt-3 flex justify-end">
-                    <button className="rounded-full bg-secondary px-4 py-2 text-slate-900" onClick={() => insertIntoNotes("\n" + (summaryText || "") + "\n")}>Copy to Notes</button>
+                    <button className="rounded-full bg-secondary px-4 py-2 text-slate-900" onClick={() => insertIntoNotes("\n" + (summaryText || "") + "\n")} disabled={!summaryText}>Copy to Notes</button>
                   </div>
                 </div>
               )}
