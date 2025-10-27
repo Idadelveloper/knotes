@@ -959,6 +959,14 @@ export default function StudyWorkspace() {
                       <p className="text-slate-700">Summarizing…</p>
                     ) : notesError ? (
                       <p className="text-red-600">{notesError}</p>
+                    ) : summarizeFormat === 'markdown' ? (
+                      <div className="-m-2">
+                        <MDEditor
+                          value={summaryText}
+                          onChange={(val) => setSummaryText(val || "")}
+                          height={Math.max(220, Math.min(500, typeof window !== 'undefined' ? window.innerHeight * 0.4 : 400))}
+                        />
+                      </div>
                     ) : (
                       <article className="prose prose-slate max-w-none">
                         <pre className="whitespace-pre-wrap text-slate-900">{summaryText || 'Adjust settings above, then click Generate Summary.'}</pre>
@@ -1036,9 +1044,13 @@ export default function StudyWorkspace() {
                     ) : notesError ? (
                       <p className="text-red-600">{notesError}</p>
                     ) : (
-                      <article className="prose prose-slate max-w-none">
-                        <pre className="whitespace-pre-wrap text-slate-900">{translatedText || "No translation yet. Select a language and click Translate."}</pre>
-                      </article>
+                      <div className="-m-2">
+                        <MDEditor
+                          value={translatedText}
+                          onChange={(val) => setTranslateText(val || "")}
+                          height={Math.max(220, Math.min(500, typeof window !== 'undefined' ? window.innerHeight * 0.5 : 400))}
+                        />
+                      </div>
                     )}
                   </div>
 
