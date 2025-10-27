@@ -5,6 +5,7 @@ import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import PWA from "../components/PWA";
 import AuthProvider from "@/components/AuthProvider";
+import "katex/dist/katex.min.css";
 
 export const metadata: Metadata = {
   title: "Knotes — Focused AI study space",

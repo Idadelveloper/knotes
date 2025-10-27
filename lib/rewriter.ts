@@ -31,7 +31,7 @@ export async function isRewriterAvailable() {
 }
 
 export async function rewriteText(input: string, options?: RewriteOptions): Promise<{ text: string; used: 'rewriter' | 'gemini' }> {
-  const context = options?.sharedContext ?? 'Restructure these study notes into clean, well-organized markdown with short headings, concise bullet points, and logical sections. Keep original meaning. Avoid extra commentary.';
+  const context = options?.sharedContext ?? 'Restructure these study notes into clean, well-organized Markdown suitable for studying. Use clear headings (##, ###), bullet/numbered lists, and tables when needed. For math, render using KaTeX/LaTeX (e.g., c = \\pm\\sqrt{a^2 + b^2}). For diagrams/flows, include Mermaid fenced code blocks (```mermaid ... ```). Keep original meaning. Return ONLY the Markdown, no extra commentary.';
   // Try Chrome Rewriter first
   if (await isRewriterAvailable()) {
     try {

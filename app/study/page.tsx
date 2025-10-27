@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { getGeminiModel } from "@/lib/ai";
 import { translateText } from "@/lib/translate";
+import MarkdownViewer from "@/components/MarkdownViewer";
 
 // Simple toast system
 type Toast = { id: number; message: string };

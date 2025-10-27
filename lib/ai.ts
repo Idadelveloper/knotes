@@ -63,7 +63,15 @@ export async function extractTextFromFile(file: File, promptOverride?: string) {
   const model = getGeminiModel();
   const prompt =
     promptOverride ||
-    "Extract the plain textual content from this document. Return only the text with original reading order. Do not add commentary.";
+    `Extract and transcribe this document into clean, well-structured Markdown suitable for studying.
+- Preserve logical reading order and hierarchy.
+- Use clear section headings (##, ###) and bullet/numbered lists where appropriate.
+- For math, render using KaTeX/LaTeX syntax (for example: c = \\pm\\sqrt{a^2 + b^2}).
+- For diagrams, use Mermaid fenced code blocks (\`\`\`mermaid … \`\`\`).
+- Use Markdown tables when tabular data is present.
+- Include code blocks only when truly code.
+- Avoid extra commentary; return ONLY the Markdown.
+`;
 
   const result = await model.generateContent([prompt, part as any]);
   // Prefer response.text(), but add a safety fallback
