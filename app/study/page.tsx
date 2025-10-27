@@ -45,7 +45,7 @@ export default function StudyWorkspace() {
   const [volume, setVolume] = useState(0.7);
 
   // Chatbot UI state
-  const [chatOpen, setChatOpen] = useState(true);
+  const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([
     { role: 'ai', text: "Hi! I’m your study assistant. Ask me to explain, summarize, or quiz you based on your notes." }
@@ -103,6 +103,10 @@ export default function StudyWorkspace() {
 
   // Music genre
   const [genre, setGenre] = useState("Lo-fi");
+
+  // Music dropdown + settings trigger
+  const [musicMenuOpen, setMusicMenuOpen] = useState(false);
+  const [musicSettingsSignal, setMusicSettingsSignal] = useState(0);
 
   // Assistant panel output
   const [assistantOutput, setAssistantOutput] = useState<string>("");
@@ -683,13 +687,35 @@ export default function StudyWorkspace() {
               >
                 <FaCloudUploadAlt /> Upload Notes
               </button>
-              <button
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2 hover:bg-blue-200"
-                onClick={() => router.push("/music")}
-                title="Generate Study Music"
-              >
-                <FaMusic /> Generate Study Music
-              </button>
+              <div className="relative">
+                <button
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2 hover:bg-blue-200"
+                  onClick={() => setMusicMenuOpen(v => !v)}
+                  title="Generate Study Music"
+                  aria-haspopup="menu"
+                  aria-expanded={musicMenuOpen}
+                >
+                  <FaMusic /> Generate Study Music <span aria-hidden>▾</span>
+                </button>
+                {musicMenuOpen && (
+                  <div role="menu" className="absolute z-20 mt-2 w-48 rounded-lg bg-white shadow-lg ring-1 ring-black/10 overflow-hidden">
+                    <button
+                      role="menuitem"
+                      className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-100"
+                      onClick={() => { setMusicMenuOpen(false); setMusicSettingsSignal(s => s + 1); }}
+                    >
+                      Background music
+                    </button>
+                    <button
+                      role="menuitem"
+                      className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-100"
+                      onClick={() => { setMusicMenuOpen(false); router.push('/music'); }}
+                    >
+                      Song with lyrics
+                    </button>
+                  </div>
+                )}
+              </div>
               <button
                 className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2 hover:bg-blue-200"
                 onClick={() => pushToast("📝 Generating quiz…")}
@@ -722,9 +748,21 @@ export default function StudyWorkspace() {
             <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => pushToast('📄 Upload coming soon')}>
               <FaCloudUploadAlt /> Upload Notes
             </button>
-            <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => router.push('/music')}>
-              <FaMusic /> Generate Study Music
-            </button>
+            <div className="relative">
+              <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => setMusicMenuOpen(v => !v)} aria-haspopup="menu" aria-expanded={musicMenuOpen}>
+                <FaMusic /> Generate Study Music <span aria-hidden>▾</span>
+              </button>
+              {musicMenuOpen && (
+                <div role="menu" className="absolute right-0 z-20 mt-2 w-48 rounded-lg bg-white shadow-lg ring-1 ring-black/10 overflow-hidden">
+                  <button role="menuitem" className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-100" onClick={() => { setMusicMenuOpen(false); setMusicSettingsSignal(s => s + 1); }}>
+                    Background music
+                  </button>
+                  <button role="menuitem" className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-100" onClick={() => { setMusicMenuOpen(false); router.push('/music'); }}>
+                    Song with lyrics
+                  </button>
+                </div>
+              )}
+            </div>
             <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => pushToast('📝 Generating quiz…')}>
               <FaQuestionCircle /> Generate Quiz
             </button>
@@ -1280,10 +1318,8 @@ export default function StudyWorkspace() {
         ))}
       </div>
 
-      {/* Music generator launcher button at bottom-left */}
-      <div className="fixed bottom-6 left-6 z-50">
-        <MusicGenerator />
-      </div>
+      {/* Music generator instance (hidden launcher). We trigger settings via dropdown signal. */}
+      <MusicGenerator showLauncher={false} openSettingsSignal={musicSettingsSignal} />
     </main>
   );
 }

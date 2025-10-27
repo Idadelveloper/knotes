@@ -7,7 +7,12 @@ import { StudyMusicSettings, PlaybackState } from "@/lib/types/music";
 import { GoogleGenAI } from "@google/genai";
 import { LiveMusicHelper } from "@/lib/utils/LiveMusicHelper";
 
-const MusicGenerator = () => {
+interface MusicGeneratorProps {
+  showLauncher?: boolean;
+  openSettingsSignal?: number;
+}
+
+const MusicGenerator = ({ showLauncher = true, openSettingsSignal }: MusicGeneratorProps) => {
   const [view, setView] = useState<"launcher" | "settings" | "player">(
     "launcher"
   );
@@ -63,6 +68,13 @@ const MusicGenerator = () => {
       };
     }
   }, []);
+
+  // Open settings programmatically when signal changes
+  useEffect(() => {
+    if (typeof openSettingsSignal === 'number') {
+      setView('settings');
+    }
+  }, [openSettingsSignal]);
 
   const buildPrompt = (s: StudyMusicSettings) => {
     const instruments = s.instruments.length > 0 ? `featuring ${s.instruments.join(' and ')}` : '';
@@ -132,6 +144,7 @@ const MusicGenerator = () => {
   };
 
   if (view === "launcher") {
+    if (!showLauncher) return null;
     return (
       <button
         onClick={() => setView("settings")}
