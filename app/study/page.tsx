@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { getGeminiModel } from "@/lib/ai";
 import { translateText } from "@/lib/translate";
+import { promptWithNotes } from "@/lib/prompt";
 import MarkdownViewer from "@/components/MarkdownViewer";
 import MDEditor from "@uiw/react-md-editor";
 
@@ -51,19 +52,34 @@ export default function StudyWorkspace() {
   // When chat is open, reserve space on the right on md+ so notes and chat sit side-by-side
   const rightPadClass = chatOpen ? "md:pr-[32rem]" : "";
 
-  const sendChat = () => {
-    const text = chatInput.trim();
-    if (!text) return;
-    setChatMessages((m) => [...m, { role: 'user', text }]);
-    setChatInput("");
-    // Simple mock response using selectedText context if exists
-    const context = selectedText?.trim() ? `Regarding your selection: "${selectedText.slice(0, 200)}"` : "";
-    setTimeout(() => {
-      setChatMessages((m) => [
-        ...m,
-        { role: 'ai', text: `Here’s a helpful note. ${context} — This is a placeholder response you can wire to AI later.` },
-      ]);
-    }, 600);
+  const sendChat = async (text: string) => {
+    const userMsg = (text || "").trim();
+    if (!userMsg) return;
+    setChatMessages((m) => [...m, { role: 'user', text: userMsg }]);
+
+    // Build contextual notes from current state (prefer markdown, else HTML/plain)
+    const notesContext = notesMarkdown?.trim()
+      ? notesMarkdown
+      : getEditorPlainText();
+
+    try {
+      setChatTyping(true);
+      const { text, used } = await promptWithNotes(notesContext || '', userMsg, {
+        onDownloadStart: () => {
+          try { console.log('[Chat] Downloading on-device model…'); } catch {}
+        },
+        onDownloadProgress: (loaded) => {
+          try { console.log('[Chat] Model download progress:', loaded); } catch {}
+        },
+      });
+      setChatMessages((m) => [...m, { role: 'ai', text: text || '(No response)'}]);
+      try { console.log(`[Chat] Reply via ${used}`); } catch {}
+    } catch (e: any) {
+      console.warn('[Chat] promptWithNotes failed:', e);
+      setChatMessages((m) => [...m, { role: 'ai', text: 'Sorry, I ran into a problem answering that. Please try again.' }]);
+    } finally {
+      setChatTyping(false);
+    }
   };
 
   // Assistant + selection state
@@ -934,16 +950,8 @@ export default function StudyWorkspace() {
         userName={userDisplay}
         userAvatarUrl=""
         onSend={(text) => {
-          setChatMessages((m) => [...m, { role: 'user', text }]);
-          setChatTyping(true);
-          const context = selectedText?.trim() ? `Regarding your selection: "${selectedText.slice(0, 200)}"` : "";
-          setTimeout(() => {
-            setChatMessages((m) => [
-              ...m,
-              { role: 'ai', text: `Here’s a helpful note. ${context} — This is a placeholder response you can wire to AI later.` },
-            ]);
-            setChatTyping(false);
-          }, 600);
+          // Delegate to the prompt-powered handler that uses the user's notes as context
+          sendChat(text);
         }}
       />
 
