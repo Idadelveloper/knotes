@@ -278,7 +278,7 @@ const MusicPlayer = ({
               <button onClick={() => skipBy(-15)} title="Rewind 15s" aria-label="Rewind 15 seconds" className="p-2 rounded-full hover:bg-white/10 transition-colors">
                 <BsFillRewindFill size={20} />
               </button>
-              <button onClick={onPlayPause} className="w-10 h-10 rounded-full bg-white text-gray-900 flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50" disabled={!audioUrl || isGenerating} aria-label={playbackState === 'playing' ? 'Pause' : 'Play'}>
+              <button onClick={onPlayPause} className="w-10 h-10 rounded-full bg-white text-gray-900 flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50" disabled={isGenerating} aria-label={playbackState === 'playing' ? 'Pause' : 'Play'}>
                 {playbackState === 'playing' ? <BsFillPauseFill size={20} /> : <BsFillPlayFill size={20} />}
               </button>
               <button onClick={() => skipBy(15)} title="Forward 15s" aria-label="Forward 15 seconds" className="p-2 rounded-full hover:bg-white/10 transition-colors">
@@ -317,18 +317,19 @@ const MusicPlayer = ({
             </button>
             <button
               onClick={() => {
-                if (!audioUrl) return;
                 try { onDownload(); } catch {}
-                const a = document.createElement('a');
-                a.href = audioUrl;
-                a.download = (trackTitle || 'study-music') + '.mp3';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
+                if (audioUrl) {
+                  const a = document.createElement('a');
+                  a.href = audioUrl;
+                  a.download = (trackTitle || 'study-music') + '.mp3';
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                }
               }}
               title="Download Track"
               className="p-2 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
-              disabled={!audioUrl}
+              disabled={isGenerating}
               aria-label="Download"
             >
               <BsDownload />

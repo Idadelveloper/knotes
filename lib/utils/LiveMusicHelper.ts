@@ -4,7 +4,7 @@
 */
 import type { PlaybackState } from '../types';
 import type { AudioChunk, GoogleGenAI, LiveMusicServerMessage, LiveMusicSession } from '@google/genai';
-import { decode, decodeAudioData } from './audio.js';
+import { decode, decodeAudioData } from './audio';
 
 export class LiveMusicHelper extends EventTarget {
 
