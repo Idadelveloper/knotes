@@ -2,16 +2,25 @@
 // Web client-side usage
 
 import { app } from "./firebase";
-import { getAI, getGenerativeModel, VertexAIBackend, type GenerativeModel } from "firebase/ai";
+import { getAI, getGenerativeModel, GoogleAIBackend, InferenceMode, type GenerativeModel } from "firebase/ai";
 
-// Initialize AI with Vertex backend (use 'global' per docs recommendation)
+// Initialize a single hybrid model instance (PREFER_ON_DEVICE with cloud fallback)
 let model: GenerativeModel | null = null;
+let cachedName: string | null = null;
 
-// Use a PDF-capable model by default
-export function getGeminiModel(modelName: string = "gemini-2.5-flash") {
-  if (!model) {
-    const ai = getAI(app, { backend: new VertexAIBackend("global") });
-    model = getGenerativeModel(ai, { model: modelName });
+// Default cloud model to use when falling back (can be overridden)
+export function getGeminiModel(modelName: string = "gemini-2.0-flash-lite") {
+  // Re-create if model name changes
+  if (!model || cachedName !== modelName) {
+    const ai = getAI(app, { backend: new GoogleAIBackend() });
+    // Use hybrid inference per Firebase AI Logic docs: prefer on-device, fallback to cloud
+    model = getGenerativeModel(ai, {
+      mode: InferenceMode.PREFER_ON_DEVICE,
+      inCloudParams: {
+        model: modelName,
+      },
+    });
+    cachedName = modelName;
   }
   return model!;
 }
