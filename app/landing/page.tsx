@@ -32,7 +32,8 @@ export default function Landing() {
 
       {/* Hero Section */}
       <section className="mx-auto flex min-h-[70vh] w-full max-w-6xl flex-col items-center justify-center px-6 pt-20 pb-16 text-center">
-        <h1 className="max-w-4xl text-4xl sm:text-5xl md:text-6xl font-semibold leading-tight text-slate-900 dark:text-[--color-accent]">
+    <h1 className="max-w-4xl text-4xl sm:text-5xl md:text-6xl font-semibold leading-tight text-slate-900 dark:text-[--color-accent] text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-blue-600"
+        >
           Where knowledge meets notes, in perfect harmony.
         </h1>
         <p className="mt-4 max-w-2xl text-base sm:text-lg text-slate-700 dark:text-slate-300">
