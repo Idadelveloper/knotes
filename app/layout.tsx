@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "@uiw/react-markdown-preview/markdown.css";
+import "@uiw/react-md-editor/markdown-editor.css";
 import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";

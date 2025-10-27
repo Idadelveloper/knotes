@@ -11,6 +11,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { getGeminiModel } from "@/lib/ai";
 import { translateText } from "@/lib/translate";
 import MarkdownViewer from "@/components/MarkdownViewer";
+import MDEditor from "@uiw/react-md-editor";
 
 // Simple toast system
 type Toast = { id: number; message: string };
@@ -21,6 +22,8 @@ export default function StudyWorkspace() {
   const userDisplay = (user?.displayName || user?.email || 'You') as string;
   // Editor refs/state
   const editorRef = useRef<HTMLDivElement | null>(null);
+  const mdTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [mdEditing, setMdEditing] = useState<string>("");
   const savedRangeRef = useRef<Range | null>(null);
 
   // Floating toolbar state
@@ -96,6 +99,7 @@ export default function StudyWorkspace() {
   const [ttsSpeaking, setTtsSpeaking] = useState<boolean>(false);
   // Persistent notes content (HTML) and edit mode
   const [notesContentHtml, setNotesContentHtml] = useState<string>("");
+  const [notesMarkdown, setNotesMarkdown] = useState<string>("");
   const [isEditingNotes, setIsEditingNotes] = useState<boolean>(false);
   // Keep a mirror of the editor text so features work even when the editor DOM isn't mounted
   const [editorText, setEditorText] = useState<string>("");
@@ -142,48 +146,95 @@ export default function StudyWorkspace() {
     return out.join('\n');
   };
 
-  // Load structured/extracted text and title from sessionStorage on first mount
+  // Load structured (Markdown) and/or extracted text and title from sessionStorage on first mount
   useEffect(() => {
-    const structuredKey = "knotes_structured_text";
-    const extractedKey = "knotes_extracted_text";
+    const structuredKey = "knotes_structured_text"; // Markdown when available
+    const extractedKey = "knotes_extracted_text"; // Raw fallback
     const titleKey = "knotes_title";
     const structured = typeof window !== "undefined" ? sessionStorage.getItem(structuredKey) : null;
     const extracted = typeof window !== "undefined" ? sessionStorage.getItem(extractedKey) : null;
     const savedTitle = typeof window !== "undefined" ? sessionStorage.getItem(titleKey) : null;
+
+    // Persistent storage (survives reloads)
+    const persistMdKey = "knotes_persist_markdown";
+    const persistHtmlKey = "knotes_persist_html";
+
     try {
       console.log("[Study] Session payload:", { structuredPreview: structured?.slice(0, 200), extractedPreview: extracted?.slice(0, 200), title: savedTitle });
     } catch {}
     if (savedTitle) setNotesTitle(savedTitle);
 
-    const payload = structured && structured.trim().length > 0 ? structured : extracted;
-    if (payload) {
-      // Prefer to render simple markdown for better readability
-      const html = mdToHtml(payload);
-      if (html && /<\w+/.test(html)) {
+    if (structured && structured.trim().length > 0) {
+      // Prefer structured Markdown from session (fresh upload)
+      setNotesMarkdown(structured);
+      const html = mdToHtml(structured);
+      setNotesContentHtml(html);
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      setEditorText((tmp.innerText || tmp.textContent || '').trim());
+
+      // Persist for future reloads
+      try {
+        localStorage.setItem(persistMdKey, structured);
+        localStorage.setItem(persistHtmlKey, html);
+        if (savedTitle) localStorage.setItem(titleKey, savedTitle);
+      } catch {}
+    } else if (extracted && extracted.trim().length > 0) {
+      // Fallback: plain extracted text → simple HTML paragraphs
+      const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const html = extracted
+        .split(/\n+/)
+        .map((l) => `<p>${esc(l)}</p>`)
+        .join('');
+      setNotesContentHtml(html);
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      setEditorText((tmp.innerText || tmp.textContent || '').trim());
+
+      // Persist HTML fallback
+      try {
+        localStorage.setItem(persistHtmlKey, html);
+        if (savedTitle) localStorage.setItem(titleKey, savedTitle);
+      } catch {}
+    } else {
+      // Nothing in session; try persistent storage
+      let persistedMd: string | null = null;
+      let persistedHtml: string | null = null;
+      try {
+        persistedMd = localStorage.getItem(persistMdKey);
+        persistedHtml = localStorage.getItem(persistHtmlKey);
+        const persistedTitle = localStorage.getItem(titleKey);
+        if (persistedTitle) setNotesTitle(persistedTitle);
+      } catch {}
+
+      if (persistedMd && persistedMd.trim()) {
+        setNotesMarkdown(persistedMd);
+        const html = mdToHtml(persistedMd);
         setNotesContentHtml(html);
-        // temporarily create a div to get plain text
         const tmp = document.createElement('div');
         tmp.innerHTML = html;
         setEditorText((tmp.innerText || tmp.textContent || '').trim());
+      } else if (persistedHtml && persistedHtml.trim()) {
+        setNotesContentHtml(persistedHtml);
+        const tmp = document.createElement('div');
+        tmp.innerHTML = persistedHtml;
+        setEditorText((tmp.innerText || tmp.textContent || '').trim());
       } else {
-        const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        setNotesContentHtml(`<p>${esc(payload)}</p>`);
-        setEditorText(payload.trim());
-      }
-      sessionStorage.removeItem(structuredKey);
-      sessionStorage.removeItem(extractedKey);
-      sessionStorage.removeItem(titleKey);
-      try { console.log("[Study] Loaded notes into state."); } catch {}
-    } else {
-      // Seed with default example content if nothing provided
-      const defaultHtml = `<p><strong>The Mitochondrion: Powerhouse of the Cell</strong> — <span class=\"bg-blue-200/50\">Mitochondria generate ATP through cellular respiration</span>, providing energy needed for cellular processes.</p>
+        // Seed with default example content if nothing provided
+        const defaultHtml = `<p><strong>The Mitochondrion: Powerhouse of the Cell</strong> — <span class=\"bg-blue-200/50\">Mitochondria generate ATP through cellular respiration</span>, providing energy needed for cellular processes.</p>
 <p class=\"mt-3\">They have a double membrane, their own DNA, and play roles in apoptosis and calcium storage.</p>
 <p class=\"mt-3\">In some organisms, organelles and pathways can be highly reduced or even lost due to parasitic or anaerobic lifestyles.</p>`;
-      setNotesContentHtml(defaultHtml);
-      const tmp = document.createElement('div');
-      tmp.innerHTML = defaultHtml;
-      setEditorText((tmp.innerText || tmp.textContent || '').trim());
+        setNotesContentHtml(defaultHtml);
+        const tmp = document.createElement('div');
+        tmp.innerHTML = defaultHtml;
+        setEditorText((tmp.innerText || tmp.textContent || '').trim());
+      }
     }
+
+    // Clear session keys (we persisted what we need)
+    sessionStorage.removeItem(structuredKey);
+    sessionStorage.removeItem(extractedKey);
+    sessionStorage.removeItem(titleKey);
   }, []);
 
   // Track mouseup/selection in editor to toggle toolbar and open assistant
@@ -656,9 +707,11 @@ export default function StudyWorkspace() {
                         className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-black/10 px-3 py-1.5 text-slate-800 hover:bg-white/80"
                         onClick={() => {
                           setIsEditingNotes(true);
-                          // sync DOM with saved HTML after next paint
+                          // prepare editor buffers after next paint
                           setTimeout(() => {
-                            if (editorRef.current) {
+                            if (notesMarkdown) {
+                              setMdEditing(notesMarkdown);
+                            } else if (editorRef.current) {
                               editorRef.current.innerHTML = notesContentHtml || '';
                             }
                           }, 0);
@@ -671,6 +724,18 @@ export default function StudyWorkspace() {
                         <button
                           className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-slate-900"
                           onClick={() => {
+                            if (notesMarkdown) {
+                              const md = mdEditing;
+                              setNotesMarkdown(md);
+                              const html = mdToHtml(md);
+                              setNotesContentHtml(html);
+                              const tmp = document.createElement('div');
+                              tmp.innerHTML = html;
+                              setEditorText((tmp.innerText || tmp.textContent || '').trim());
+                              setIsEditingNotes(false);
+                              pushToast('💾 Notes saved');
+                              return;
+                            }
                             const el = editorRef.current;
                             const html = el ? el.innerHTML : notesContentHtml;
                             const plain = el ? (el.innerText || el.textContent || '').trim() : editorText;
@@ -686,8 +751,10 @@ export default function StudyWorkspace() {
                           className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-black/10 px-3 py-1.5 text-slate-800 hover:bg-white/80"
                           onClick={() => {
                             setIsEditingNotes(false);
-                            // revert DOM to saved HTML
-                            if (editorRef.current) editorRef.current.innerHTML = notesContentHtml || '';
+                            if (!notesMarkdown) {
+                              // revert DOM to saved HTML
+                              if (editorRef.current) editorRef.current.innerHTML = notesContentHtml || '';
+                            }
                           }}
                         >
                           Cancel
@@ -696,14 +763,41 @@ export default function StudyWorkspace() {
                     )}
                   </div>
 
-                  <div
-                    ref={editorRef}
-                    contentEditable={isEditingNotes}
-                    suppressContentEditableWarning
-                    className={`min-h-[500px] max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 p-4 leading-7 text-slate-900 outline-none ${isEditingNotes ? 'focus:ring-2 focus:ring-primary' : 'bg-white'}`}
-                    onInput={() => { if (isEditingNotes) setEditorText(getEditorPlainText()); }}
-                    dangerouslySetInnerHTML={{ __html: notesContentHtml || '<p class="text-gray-400 select-none">Paste your notes here to get started...</p>' }}
-                  />
+                  {/* Viewer / Editor */}
+                  {!isEditingNotes && (
+                    notesMarkdown ? (
+                      <div ref={editorRef} className="min-h-[500px] max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 p-4 bg-white">
+                        <MarkdownViewer source={notesMarkdown} className="prose max-w-none" />
+                      </div>
+                    ) : (
+                      <div
+                        ref={editorRef}
+                        className={`min-h-[500px] max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 p-4 leading-7 text-slate-900 bg-white`}
+                        dangerouslySetInnerHTML={{ __html: notesContentHtml || '<p class="text-gray-400 select-none">Paste your notes here to get started...</p>' }}
+                      />
+                    )
+                  )}
+
+                  {isEditingNotes && (
+                    notesMarkdown ? (
+                      <div ref={editorRef} className="min-h-[500px] max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 p-2 bg-white">
+                        <MDEditor
+                          value={mdEditing}
+                          onChange={(val) => setMdEditing(val || "")}
+                          height={Math.max(500, Math.min(800, window.innerHeight * 0.6))}
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        ref={editorRef}
+                        contentEditable
+                        suppressContentEditableWarning
+                        className={`min-h-[500px] max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 p-4 leading-7 text-slate-900 outline-none focus:ring-2 focus:ring-primary`}
+                        onInput={() => { setEditorText(getEditorPlainText()); }}
+                        dangerouslySetInnerHTML={{ __html: notesContentHtml || '<p class="text-gray-400 select-none">Paste your notes here to get started...</p>' }}
+                      />
+                    )
+                  )}
                 </div>
               )}
 
