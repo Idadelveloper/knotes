@@ -6,6 +6,7 @@ import MusicPlayer from "./MusicPlayer";
 import { StudyMusicSettings, PlaybackState } from "@/lib/types/music";
 import { GoogleGenAI } from "@google/genai";
 import { LiveMusicHelper } from "@/lib/utils/LiveMusicHelper";
+import { incStat, addRecentTrack } from "@/lib/stats";
 
 interface MusicGeneratorProps {
   showLauncher?: boolean;
@@ -119,6 +120,11 @@ const MusicGenerator = ({ showLauncher = true, openSettingsSignal }: MusicGenera
     try {
       if (!helper) throw new Error('LiveMusicHelper not initialized');
       await helper.play(prompt);
+      try { incStat('musicGenerations', 1); } catch {}
+      try {
+        const t = (trackTitle && trackTitle.trim().length > 0) ? trackTitle : `${newSettings.vibe} ${newSettings.genre}`;
+        addRecentTrack({ id: `${Date.now()}:${t}`, title: t, playedAt: new Date().toISOString(), href: '/study' });
+      } catch {}
       // audioUrl remains undefined because we stream via WebAudio; MusicPlayer supports background waves/UI
       setAudioUrl(undefined);
     } catch (err) {

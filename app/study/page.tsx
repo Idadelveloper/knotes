@@ -14,6 +14,7 @@ import { summarizeText, isSummarizerAvailable } from "@/lib/summarize";
 import { promptWithNotes } from "@/lib/prompt";
 import MarkdownViewer from "@/components/MarkdownViewer";
 import MDEditor from "@uiw/react-md-editor";
+import { addRecentSession, addStudyMinutes } from "@/lib/stats";
 
 // Simple toast system
 type Toast = { id: number; message: string };
@@ -284,6 +285,34 @@ export default function StudyWorkspace() {
     sessionStorage.removeItem(structuredKey);
     sessionStorage.removeItem(extractedKey);
     sessionStorage.removeItem(titleKey);
+  }, []);
+
+  // Record recent session when title becomes available
+  useEffect(() => {
+    if (!notesTitle || !notesTitle.trim()) return;
+    try {
+      addRecentSession({ id: `${Date.now()}:${notesTitle}`, title: notesTitle.trim(), openedAt: new Date().toISOString(), href: "/study" });
+    } catch {}
+  }, [notesTitle]);
+
+  // Simple study timer: accumulate minutes on unmount or page unload
+  const studyStartRef = useRef<number | null>(null);
+  useEffect(() => {
+    studyStartRef.current = Date.now();
+    const onBeforeUnload = () => {
+      if (studyStartRef.current) {
+        const elapsedMs = Date.now() - studyStartRef.current;
+        const minutes = Math.max(0, Math.round(elapsedMs / 60000));
+        if (minutes > 0) {
+          try { addStudyMinutes(minutes); } catch {}
+        }
+      }
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      onBeforeUnload();
+    };
   }, []);
 
   // Track mouseup/selection in editor to toggle toolbar and open assistant
