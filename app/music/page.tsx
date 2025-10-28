@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import NavBar from "@/components/NavBar";
 import MusicPlayer from "@/components/music/MusicPlayer";
+import SelectDialog from "@/components/music/SelectDialog";
 import {
   listTracks,
   getTrack,
@@ -15,23 +14,14 @@ import { PlaybackState } from "@/lib/types/music";
 import { FaPlay, FaDownload, FaPlus, FaMusic, FaListUl } from "react-icons/fa";
 
 export default function MusicPage() {
-  const router = useRouter();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [playlists, setPlaylists] = useState<{ id: string; name: string; createdAt: string }[]>([]);
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
   const [playbackState, setPlaybackState] = useState<PlaybackState>("stopped");
+  const [openSelect, setOpenSelect] = useState(false);
 
   const handleGenerateClick = () => {
-    try {
-      const sid = typeof window !== 'undefined' ? sessionStorage.getItem('knotes_current_session_id') : null;
-      if (sid) {
-        router.push(`/music/${sid}`);
-      } else {
-        router.push(`/library?intent=music`);
-      }
-    } catch {
-      router.push(`/library?intent=music`);
-    }
+    setOpenSelect(true);
   };
 
   // Load tracks (full objects) and playlists from localStorage
@@ -210,6 +200,7 @@ export default function MusicPage() {
           </div>
         )}
       </main>
+      <SelectDialog open={openSelect} onClose={() => setOpenSelect(false)} />
     </div>
   );
 }
