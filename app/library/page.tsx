@@ -32,8 +32,8 @@ export default function LibraryPage() {
 
   return (
     <main className="mx-auto w-full max-w-3xl px-5 pt-24 pb-16">
-      <h1 className="text-3xl font-semibold text-slate-900 dark:text-[--color-accent] mb-6">Library</h1>
-      <p className="text-slate-700 dark:text-slate-300 mb-8">
+      <h1 className="text-3xl font-semibold text-slate-900  mb-6">Library</h1>
+      <p className="text-slate-700  mb-8">
         {intent === "music"
           ? "Select a study upload to generate music for."
           : intent === "study"
@@ -42,8 +42,8 @@ export default function LibraryPage() {
       </p>
 
       {empty ? (
-        <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 p-8 text-center">
-          <p className="text-slate-700 dark:text-slate-300">No uploads yet.</p>
+        <div className="rounded-2xl border border-black/5  bg-white/70  p-8 text-center">
+          <p className="text-slate-700 ">No uploads yet.</p>
           <div className="mt-4">
             <Link href="/home" className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-2 text-slate-900 font-medium shadow-[0_4px_0_rgba(0,0,0,0.08)] hover:shadow-[0_6px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px">
               Upload or Paste Notes
@@ -53,10 +53,10 @@ export default function LibraryPage() {
       ) : (
         <ul className="space-y-3">
           {sessions.map((s) => (
-            <li key={s.id} className="rounded-xl ring-1 ring-black/5 dark:ring-white/10 bg-white/70 dark:bg-white/5 p-4 hover:ring-primary/60 transition flex items-center justify-between gap-3">
+            <li key={s.id} className="rounded-xl ring-1 ring-black/5 bg-white/70  p-4 hover:ring-primary/60 transition flex items-center justify-between gap-3">
               <div>
-                <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{s.title}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">{new Date(s.createdAt).toLocaleString()}</div>
+                <div className="font-medium text-slate-900  line-clamp-1">{s.title}</div>
+                <div className="text-xs text-slate-500 ">{new Date(s.createdAt).toLocaleString()}</div>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => handleSelect(s.id)} className="inline-flex items-center justify-center rounded-full bg-secondary px-4 py-2 text-slate-900">Select</button>

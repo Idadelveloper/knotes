@@ -94,9 +94,9 @@ export default function HomePage() {
   const displayName = (user?.displayName || user?.email || "there") as string;
 
   const StatCard = ({ label, value }: { label: string; value: string | number }) => (
-    <div className="rounded-2xl ring-1 ring-black/5 dark:ring-white/10 bg-white/70 dark:bg-white/5 p-4 flex flex-col gap-1">
-      <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</div>
-      <div className="text-2xl font-semibold text-slate-900 dark:text-[--color-accent]">{value}</div>
+    <div className="rounded-2xl ring-1 ring-black/5  bg-white/70  p-4 flex flex-col gap-1">
+      <div className="text-xs uppercase tracking-wide text-slate-500 ">{label}</div>
+      <div className="text-2xl font-semibold text-slate-900 ">{value}</div>
     </div>
   );
 
@@ -116,10 +116,10 @@ export default function HomePage() {
         <section className="mb-10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-semibold text-slate-900 dark:text-[--color-accent]">
+              <h1 className="text-3xl sm:text-4xl font-semibold text-slate-900 ">
                 Hello, {displayName.split("@")[0]}
               </h1>
-              <p className="mt-2 text-slate-700 dark:text-slate-300">
+              <p className="mt-2 text-slate-700">
                 Welcome back. Here’s a quick look at your study activity.
               </p>
             </div>
@@ -134,7 +134,7 @@ export default function HomePage() {
               </button>
             </div>
           </div>
-          <p id="upload-help" className="mt-3 max-w-2xl text-sm sm:text-base text-slate-600 dark:text-slate-300">
+          <p id="upload-help" className="mt-3 max-w-2xl text-sm sm:text-base text-slate-600 ">
             Drag & drop a .txt, .pdf, or .docx file — or paste your notes. We’ll generate a personalized, focus-friendly soundtrack for your study session.
           </p>
         </section>
@@ -151,11 +151,11 @@ export default function HomePage() {
         <section className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
           {/* Left: Recent Study Sessions */}
           <div>
-            <h2 className="text-left text-2xl md:text-3xl font-semibold text-slate-900 dark:text-[--color-accent] mb-4">
+            <h2 className="text-left text-2xl md:text-3xl font-semibold text-slate-900  mb-4">
               Recent Study Sessions
             </h2>
             {recents.length === 0 ? (
-              <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-sm p-8 text-center text-slate-700 dark:text-slate-300">
+              <div className="rounded-2xl border border-black/5 bg-white/60  backdrop-blur-sm p-8 text-center text-slate-700 ">
                 <p className="flex items-center justify-center gap-2 text-base md:text-lg">
                   <FaClock className="text-primary" />
                   No study sessions yet. Start by uploading your first notes!
@@ -164,16 +164,16 @@ export default function HomePage() {
             ) : (
               <ul className="space-y-3">
                 {recents.slice(0, 7).map((s) => (
-                  <li key={s.id} className="rounded-xl ring-1 ring-black/5 dark:ring-white/10 bg-white/70 dark:bg-white/5 p-4 hover:ring-primary/60 transition">
+                  <li key={s.id} className="rounded-xl ring-1 ring-black/5  bg-white/70 p-4 hover:ring-primary/60 transition">
                     {s.href ? (
                       <Link href={s.href} className="block">
-                        <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{s.title}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">{new Date(s.openedAt).toLocaleString()}</div>
+                        <div className="font-medium text-slate-900  line-clamp-1">{s.title}</div>
+                        <div className="text-xs text-slate-500 ">{new Date(s.openedAt).toLocaleString()}</div>
                       </Link>
                     ) : (
                       <div className="block">
-                        <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{s.title}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">{new Date(s.openedAt).toLocaleString()}</div>
+                        <div className="font-medium text-slate-900  line-clamp-1">{s.title}</div>
+                        <div className="text-xs text-slate-500 ">{new Date(s.openedAt).toLocaleString()}</div>
                       </div>
                     )}
                   </li>
@@ -184,11 +184,11 @@ export default function HomePage() {
 
           {/* Right: Recently Played */}
           <div>
-            <h2 className="text-left text-2xl md:text-3xl font-semibold text-slate-900 dark:text-[--color-accent] mb-4">
+            <h2 className="text-left text-2xl md:text-3xl font-semibold text-slate-900  mb-4">
               Recently Played
             </h2>
             {tracks.length === 0 ? (
-              <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-sm p-8 text-center text-slate-700 dark:text-slate-300">
+              <div className="rounded-2xl border border-black/5  bg-white/60  backdrop-blur-sm p-8 text-center text-slate-700 ">
                 <p className="flex items-center justify-center gap-2 text-base md:text-lg">
                   <FaMusic className="text-primary" />
                   No music played yet. Generate background sound from your study space!
@@ -197,16 +197,16 @@ export default function HomePage() {
             ) : (
               <ul className="space-y-3">
                 {tracks.slice(0, 7).map((t) => (
-                  <li key={t.id} className="rounded-xl ring-1 ring-black/5 dark:ring-white/10 bg-white/70 dark:bg-white/5 p-4 hover:ring-primary/60 transition">
+                  <li key={t.id} className="rounded-xl ring-1 ring-black/5  bg-white/70 p-4 hover:ring-primary/60 transition">
                     {t.href ? (
                       <Link href={t.href} className="block">
-                        <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{t.title}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">{new Date(t.playedAt).toLocaleString()}</div>
+                        <div className="font-medium text-slate-900  line-clamp-1">{t.title}</div>
+                        <div className="text-xs text-slate-500 ">{new Date(t.playedAt).toLocaleString()}</div>
                       </Link>
                     ) : (
                       <div className="block">
-                        <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{t.title}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">{new Date(t.playedAt).toLocaleString()}</div>
+                        <div className="font-medium text-slate-900  line-clamp-1">{t.title}</div>
+                        <div className="text-xs text-slate-500 ">{new Date(t.playedAt).toLocaleString()}</div>
                       </div>
                     )}
                   </li>
@@ -229,16 +229,16 @@ export default function HomePage() {
           }}
         >
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
 
           {/* Panel */}
-          <div className="relative z-10 w-full max-w-2xl rounded-3xl bg-accent/95 dark:bg-[--color-dark-bg]/95 ring-1 ring-black/10 dark:ring-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.25)]">
+          <div className="relative z-10 w-full max-w-2xl rounded-3xl bg-accent/95  ring-1 ring-black/10  shadow-[0_20px_50px_rgba(0,0,0,0.25)]">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-black/10 dark:border-white/10">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent]">Upload or Paste Notes</h3>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-black/10 ">
+              <h3 className="text-lg font-semibold text-slate-900 ">Upload or Paste Notes</h3>
               <button
                 aria-label="Close"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-black/10 dark:ring-white/10 bg-white/70 dark:bg-white/5 text-slate-700 dark:text-[--color-accent] hover:bg-white/80"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-black/10  bg-white/70 text-slate-700  hover:bg-white/80"
                 onClick={() => setIsModalOpen(false)}
               >
                 <HiOutlineX size={18} />
@@ -252,7 +252,7 @@ export default function HomePage() {
               )}
               {/* Drag & drop upload */}
               <div
-                className={`group relative rounded-2xl bg-white/80 dark:bg-white/5 p-5 ring-1 ring-black/10 dark:ring-white/10 text-center transition ${
+                className={`group relative rounded-2xl bg-white/80  p-5 ring-1 ring-black/10 dtext-center transition ${
                   isDragging ? "ring-2 ring-primary shadow-[0_0_0_4px_rgba(139,198,236,0.25)]" : ""
                 }`}
                 onDrop={onDrop}
@@ -265,8 +265,8 @@ export default function HomePage() {
                 <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary ring-1 ring-primary/30">
                   <FaCloudUploadAlt size={22} />
                 </div>
-                <p className="mt-3 font-medium text-slate-900 dark:text-[--color-accent]">Drag & drop your file here</p>
-                <p className="text-sm text-slate-600 dark:text-slate-300">.txt, .pdf, .docx</p>
+                <p className="mt-3 font-medium text-slate-900 ">Drag & drop your file here</p>
+                <p className="text-sm text-slate-600 ">.txt, .pdf, .docx</p>
                 <div className="mt-4">
                   <button
                     onClick={triggerFile}
@@ -310,7 +310,7 @@ export default function HomePage() {
                     }}
                   />
                 </div>
-                <div className="mt-2 inline-flex items-center gap-2 justify-center text-xs text-slate-500 dark:text-slate-400">
+                <div className="mt-2 inline-flex items-center gap-2 justify-center text-xs text-slate-500 ">
                   <FaInfoCircle aria-hidden />
                   <span>We process locally when possible for privacy.</span>
                 </div>
@@ -324,7 +324,7 @@ export default function HomePage() {
                   rows={8}
                   value={notesText}
                   onChange={(e) => setNotesText(e.target.value)}
-                  className="w-full resize-y rounded-2xl bg-white/80 dark:bg-white/5 text-slate-900 dark:text-[--color-accent] placeholder:text-slate-500 dark:placeholder:text-slate-400 p-4 ring-1 ring-black/10 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full resize-y rounded-2xl bg-white/80  text-slate-900  placeholder:text-slate-500  p-4 ring-1 ring-black/10 focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Paste your notes or write here…"
                 />
               </div>
