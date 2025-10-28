@@ -14,6 +14,8 @@ import { summarizeText, isSummarizerAvailable } from "@/lib/summarize";
 import { promptWithNotes } from "@/lib/prompt";
 import MarkdownViewer from "@/components/MarkdownViewer";
 import MDEditor from "@uiw/react-md-editor";
+import { addRecentSession, addStudyMinutes } from "@/lib/stats";
+import { updateEditableText, getSession } from "@/lib/storage/sessions";
 
 // Simple toast system
 type Toast = { id: number; message: string };
@@ -51,6 +53,11 @@ export default function StudyWorkspace() {
     { role: 'ai', text: "Hi! I’m your study assistant. Ask me to explain, summarize, or quiz you based on your notes." }
   ]);
   const [chatTyping, setChatTyping] = useState(false);
+  // Voice chat state
+  const [recording, setRecording] = useState(false);
+  const [speakEnabled, setSpeakEnabled] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   // When chat is open, reserve space on the right on md+ so notes and chat sit side-by-side
   const rightPadClass = chatOpen ? "md:pr-[32rem]" : "";
 
@@ -75,6 +82,15 @@ export default function StudyWorkspace() {
         },
       });
       setChatMessages((m) => [...m, { role: 'ai', text: text || '(No response)'}]);
+      // Optional: Speak the AI reply if enabled
+      try {
+        if (speakEnabled) {
+          const { speak } = await import('@/lib/utils/speech');
+          await speak(text || '', { rate: 1.0, pitch: 1.0 });
+        }
+      } catch (e) {
+        try { console.warn('[Chat] TTS failed', e); } catch {}
+      }
       try { console.log(`[Chat] Reply via ${used}`); } catch {}
     } catch (e: any) {
       console.warn('[Chat] promptWithNotes failed:', e);
@@ -270,6 +286,36 @@ export default function StudyWorkspace() {
     sessionStorage.removeItem(structuredKey);
     sessionStorage.removeItem(extractedKey);
     sessionStorage.removeItem(titleKey);
+  }, []);
+
+  // Record recent session when title becomes available (prefer dynamic session id if present)
+  useEffect(() => {
+    if (!notesTitle || !notesTitle.trim()) return;
+    try {
+      const sid = typeof window !== 'undefined' ? sessionStorage.getItem('knotes_current_session_id') : null;
+      const href = sid ? `/study/${sid}` : '/study';
+      addRecentSession({ id: sid || `${Date.now()}:${notesTitle}`, title: notesTitle.trim(), openedAt: new Date().toISOString(), href });
+    } catch {}
+  }, [notesTitle]);
+
+  // Simple study timer: accumulate minutes on unmount or page unload
+  const studyStartRef = useRef<number | null>(null);
+  useEffect(() => {
+    studyStartRef.current = Date.now();
+    const onBeforeUnload = () => {
+      if (studyStartRef.current) {
+        const elapsedMs = Date.now() - studyStartRef.current;
+        const minutes = Math.max(0, Math.round(elapsedMs / 60000));
+        if (minutes > 0) {
+          try { addStudyMinutes(minutes); } catch {}
+        }
+      }
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      onBeforeUnload();
+    };
   }, []);
 
   // Track mouseup/selection in editor to toggle toolbar and open assistant
@@ -823,22 +869,53 @@ export default function StudyWorkspace() {
                   {/* Controls: Edit/Save/Cancel */}
                   <div className="mb-2 flex items-center gap-2 justify-end">
                     {!isEditingNotes ? (
-                      <button
-                        className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-black/10 px-3 py-1.5 text-slate-800 hover:bg-white/80"
-                        onClick={() => {
-                          setIsEditingNotes(true);
-                          // prepare editor buffers after next paint
-                          setTimeout(() => {
-                            if (notesMarkdown) {
-                              setMdEditing(notesMarkdown);
-                            } else if (editorRef.current) {
-                              editorRef.current.innerHTML = notesContentHtml || '';
-                            }
-                          }, 0);
-                        }}
-                      >
-                        Edit
-                      </button>
+                      <>
+                        <button
+                          className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-black/10 px-3 py-1.5 text-slate-800 hover:bg-white/80"
+                          onClick={() => {
+                            setIsEditingNotes(true);
+                            // prepare editor buffers after next paint
+                            setTimeout(() => {
+                              if (notesMarkdown) {
+                                setMdEditing(notesMarkdown);
+                              } else if (editorRef.current) {
+                                editorRef.current.innerHTML = notesContentHtml || '';
+                              }
+                            }, 0);
+                          }}
+                        >
+                          Edit
+                        </button>
+                        {notesMarkdown && (
+                          <button
+                            className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-black/10 px-3 py-1.5 text-slate-800 hover:bg-white/80"
+                            onClick={() => {
+                              try {
+                                const sid = sessionStorage.getItem('knotes_current_session_id');
+                                if (!sid) return;
+                                const sess = getSession(sid);
+                                const md = (sess?.structuredText || sess?.originalText || notesMarkdown) as string;
+                                setNotesMarkdown(md);
+                                const html = mdToHtml(md);
+                                setNotesContentHtml(html);
+                                const tmp = document.createElement('div');
+                                tmp.innerHTML = html;
+                                setEditorText((tmp.innerText || tmp.textContent || '').trim());
+                                updateEditableText(sid, md);
+                                try { sessionStorage.setItem('knotes_structured_text', md); } catch {}
+                                // Persist restored version for refreshes
+                                try {
+                                  localStorage.setItem('knotes_persist_markdown', md);
+                                  localStorage.setItem('knotes_persist_html', html);
+                                } catch {}
+                                pushToast('🔁 Restored original');
+                              } catch {}
+                            }}
+                          >
+                            Reset to Original
+                          </button>
+                        )}
+                      </>
                     ) : (
                       <>
                         <button
@@ -852,6 +929,18 @@ export default function StudyWorkspace() {
                               const tmp = document.createElement('div');
                               tmp.innerHTML = html;
                               setEditorText((tmp.innerText || tmp.textContent || '').trim());
+                              try {
+                                const sid = sessionStorage.getItem('knotes_current_session_id');
+                                if (sid) {
+                                  updateEditableText(sid, md);
+                                }
+                                try { sessionStorage.setItem('knotes_structured_text', md); } catch {}
+                                // Persist across reloads
+                                try {
+                                  localStorage.setItem('knotes_persist_markdown', md);
+                                  localStorage.setItem('knotes_persist_html', html);
+                                } catch {}
+                              } catch {}
                               setIsEditingNotes(false);
                               pushToast('💾 Notes saved');
                               return;
@@ -861,6 +950,8 @@ export default function StudyWorkspace() {
                             const plain = el ? (el.innerText || el.textContent || '').trim() : editorText;
                             setNotesContentHtml(html || '');
                             setEditorText(plain);
+                            // Persist HTML-based edits for non-Markdown sessions
+                            try { if (html) localStorage.setItem('knotes_persist_html', html); } catch {}
                             setIsEditingNotes(false);
                             pushToast('💾 Notes saved');
                           }}
@@ -1157,6 +1248,81 @@ export default function StudyWorkspace() {
         onSend={(text) => {
           // Delegate to the prompt-powered handler that uses the user's notes as context
           sendChat(text);
+        }}
+        onMicStart={async () => {
+          try {
+            if (recording) return;
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            audioChunksRef.current = [];
+            mr.ondataavailable = (e) => { if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data); };
+            mr.onstop = async () => {
+              setRecording(false);
+              const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+              // Transcribe via Firebase AI Logic (Gemini) using generateContent with audio file part
+              try {
+                setChatTyping(true);
+                const file = new File([blob], 'audio.webm', { type: 'audio/webm' });
+                const { fileToGenerativePart, getGeminiModel } = await import('@/lib/ai');
+                const part = await fileToGenerativePart(file);
+                const model = getGeminiModel('gemini-2.5-flash');
+                const prompt = 'Transcribe this user audio into accurate text for a study assistant chat.';
+                const result = await model.generateContent([prompt, part as any]);
+                const transcript = (result?.response?.text?.() as string) || '';
+                if (transcript.trim()) {
+                  setChatMessages((m) => [...m, { role: 'user', text: transcript.trim() }]);
+                  await sendChat(transcript.trim());
+                } else {
+                  setChatMessages((m) => [...m, { role: 'ai', text: 'Sorry, I could not transcribe that audio.' }]);
+                }
+              } catch (e) {
+                console.warn('[Chat] Transcription failed', e);
+                setChatMessages((m) => [...m, { role: 'ai', text: 'Transcription failed. Please try again.' }]);
+                setChatTyping(false);
+              }
+            };
+            mr.start(250);
+            mediaRecorderRef.current = mr;
+            setRecording(true);
+          } catch (e) {
+            pushToast('⚠️ Microphone permission denied or unavailable.');
+          }
+        }}
+        onMicStop={() => {
+          try {
+            const mr = mediaRecorderRef.current;
+            if (mr && mr.state !== 'inactive') {
+              mr.stop();
+              mr.stream.getTracks().forEach(t => t.stop());
+              mediaRecorderRef.current = null;
+            }
+          } catch {}
+        }}
+        recording={recording}
+        speakEnabled={speakEnabled}
+        onToggleSpeak={async () => {
+          try {
+            const next = !speakEnabled;
+            setSpeakEnabled(next);
+            if (next) {
+              // Attempt to unlock/resume speech on user gesture and give quick feedback
+              const { canSpeak, speak } = await import('@/lib/utils/speech');
+              if (!canSpeak()) {
+                pushToast('⚠️ Voice not supported in this browser');
+              } else {
+                try {
+                  await speak('Voice replies enabled');
+                } catch {
+                  // ignored; will still be enabled and speak on next reply
+                }
+              }
+            } else {
+              try {
+                const { stopSpeaking } = await import('@/lib/utils/speech');
+                stopSpeaking();
+              } catch {}
+            }
+          } catch {}
         }}
       />
 

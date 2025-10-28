@@ -65,12 +65,19 @@ const StudyMusicGenerator = () => {
     setIsGenerating(true);
     // Simulate music generation
     await new Promise((resolve) => setTimeout(resolve, 2000));
-    setTrackTitle(
-      `${settings.genre} - ${settings.vibe} - ${settings.energy}`
-    );
-    setAudioUrl(
-      "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
-    );
+    const title = `${settings.genre} - ${settings.vibe} - ${settings.energy}`;
+    setTrackTitle(title);
+    const url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+    setAudioUrl(url);
+    try {
+      const { addRecentTrack } = await import("@/lib/stats");
+      let href: string | undefined = undefined;
+      try {
+        const sid = sessionStorage.getItem('knotes_current_session_id');
+        href = sid ? `/music/${sid}` : '/library?intent=music';
+      } catch {}
+      addRecentTrack({ id: String(Date.now()), title, playedAt: new Date().toISOString(), href });
+    } catch {}
     setIsGenerating(false);
     setView("player");
   };

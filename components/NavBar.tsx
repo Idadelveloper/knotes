@@ -18,9 +18,9 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
 
   const NavCenter = () => (
     <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-700 dark:text-[--color-accent]">
-      <Link href="/study" title="Go to Study Space" className="hover:text-slate-900 dark:hover:text-white">Study</Link>
-      <Link href="/music" title="Generate Study Music" className="hover:text-slate-900 dark:hover:text-white">Music</Link>
-      <Link href="#" title="View Study History" className="hover:text-slate-900 dark:hover:text-white">History</Link>
+      <Link href="/library?intent=study" className="hover:text-slate-900 dark:hover:text-white">Study</Link>
+      <Link href="/library?intent=music" className="hover:text-slate-900 dark:hover:text-white">Music</Link>
+      <Link href="/library" className="hover:text-slate-900 dark:hover:text-white">Library</Link>
     </nav>
   );
 
@@ -88,9 +88,9 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
           <div className="mx-auto max-w-5xl px-4 sm:px-6 py-3">
             {isAuth ? (
               <div className="flex flex-col gap-2">
-                <Link href="/study" className="py-2 text-slate-800 dark:text-[--color-accent]">Study</Link>
-                <Link href="/music" className="py-2 text-slate-800 dark:text-[--color-accent]">Music</Link>
-                <Link href="#" className="py-2 text-slate-800 dark:text-[--color-accent]">History</Link>
+                <Link href="/library?intent=study" className="py-2 text-slate-800 dark:text-[--color-accent]">Study</Link>
+                <Link href="/library?intent=music" className="py-2 text-slate-800 dark:text-[--color-accent]">Music</Link>
+                <Link href="/library" className="py-2 text-slate-800 dark:text-[--color-accent]">Library</Link>
                 <Link
                 href="/settings"
                 className="mt-2 inline-flex w-max items-center gap-2 rounded-xl bg-secondary/70 px-3 py-2 text-slate-900 shadow-[0_3px_0_rgba(0,0,0,0.06)]"
