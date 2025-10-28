@@ -232,16 +232,26 @@ export default function MusicPage() {
             try {
                 const res = await composeSongDetailed({ prompt, musicLengthMs: lengthMs, forceInstrumental: false });
                 setGenStep(3);
-                setAudioUrl(res.blobUrl);
+                // Persist audio blob in Cache Storage under a stable URL for replay/streaming later
+                let stableUrl = res.blobUrl;
+                let newTrackId: string | undefined = undefined;
+                try {
+                    newTrackId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `t_${Date.now()}`;
+                    const blob = await (await fetch(res.blobUrl)).blob();
+                    const cache = await caches.open('KNOTES_CACHE_V1');
+                    stableUrl = `/cached-audio/${newTrackId}.mp3`;
+                    await cache.put(stableUrl, new Response(blob, { headers: { 'Content-Type': 'audio/mpeg' } }));
+                } catch {}
+                setAudioUrl(stableUrl);
                 setPreviewOpen(true);
                 setIsGenerating(false);
                 setPlaybackState('playing');
                 pushToast('🎶 Song ready');
-                // Persist track entity for playlist usage
+                // Persist track entity for playlist usage (with cached URL if available)
                 try {
                     const sid = Array.isArray(id) ? id[0] : id;
                     const tTitle = (trackTitle && trackTitle.trim()) ? trackTitle : `${mood} ${genre}`;
-                    const track = addTrack({ title: tTitle, sessionId: sid, kind: 'lyrics', audioUrl: res.blobUrl, lyrics: lyrics });
+                    const track = addTrack({ id: newTrackId, title: tTitle, sessionId: sid, kind: 'lyrics', audioUrl: stableUrl, lyrics: lyrics, settings: { genre, mood, tempoBpm: Math.round(tempo), energy, instruments: instrumentList, singer, lyricStyle: lyricsMode, durationSec: lengthSec, manualTopics, notes } });
                     setCurrentTrackId(track.id);
                 } catch {}
                 // Save recent track with generated title
@@ -259,7 +269,17 @@ export default function MusicPage() {
                 if (err && err.code === 'bad_prompt' && err.suggestion) {
                     try {
                         const res2 = await composeSongDetailed({ prompt: err.suggestion, musicLengthMs: lengthMs, forceInstrumental: false });
-                        setAudioUrl(res2.blobUrl);
+                        // Persist audio blob to cache under stable URL (retry path)
+                        let stableUrl2 = res2.blobUrl;
+                        let newTrackId2: string | undefined = undefined;
+                        try {
+                            newTrackId2 = (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `t_${Date.now()}`;
+                            const blob2 = await (await fetch(res2.blobUrl)).blob();
+                            const cache2 = await caches.open('KNOTES_CACHE_V1');
+                            stableUrl2 = `/cached-audio/${newTrackId2}.mp3`;
+                            await cache2.put(stableUrl2, new Response(blob2, { headers: { 'Content-Type': 'audio/mpeg' } }));
+                        } catch {}
+                        setAudioUrl(stableUrl2);
                         setPreviewOpen(true);
                         setIsGenerating(false);
                         setPlaybackState('playing');
@@ -276,7 +296,7 @@ export default function MusicPage() {
                         try {
                             const sid = Array.isArray(id) ? id[0] : id;
                             const tTitle = (trackTitle && trackTitle.trim()) ? trackTitle : `${mood} ${genre}`;
-                            const track = addTrack({ title: tTitle, sessionId: sid, kind: 'lyrics', audioUrl: res2.blobUrl, lyrics: lyrics });
+                            const track = addTrack({ id: newTrackId2, title: tTitle, sessionId: sid, kind: 'lyrics', audioUrl: stableUrl2, lyrics: lyrics, settings: { genre, mood, tempoBpm: Math.round(tempo), energy, instruments: instrumentList, singer, lyricStyle: lyricsMode, durationSec: lengthSec, manualTopics, notes } });
                             setCurrentTrackId(track.id);
                         } catch {}
                         try { previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
