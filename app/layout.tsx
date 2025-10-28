@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: "Knotes — Focused AI study space",
   description:
     "Knotes helps students study smarter with focused reading, AI explanations, adaptive music, songs, and TTS — all in one tab.",
-    manifest: "manifest.ts/"
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({
@@ -25,6 +25,7 @@ export default function RootLayout({
     <html lang="en" className="dark:[color-scheme:dark] [color-scheme:light]">
       <body className="antialiased font-sans text-slate-900 bg-accent dark:bg-[--color-dark-bg] dark:text-[--color-accent] min-h-screen">
         <AuthProvider>
+          <PWA />
           <NavBar isAuthenticated={false} />
           {children}
           <Footer />

@@ -1,12 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FaCloudUploadAlt, FaInfoCircle, FaClock } from "react-icons/fa";
+import Link from "next/link";
+import { FaCloudUploadAlt, FaInfoCircle, FaClock, FaMusic } from "react-icons/fa";
 import { HiOutlineX } from "react-icons/hi";
 import { extractTextFromFile } from "@/lib/ai";
 import { rewriteText, generateTitle } from "@/lib/rewriter";
+import { useAuth } from "@/components/AuthProvider";
+import { getStats, getRecentSessions, getRecentTracks, incStat, addRecentSession, type DashboardStats, type RecentSession, type RecentTrack } from "@/lib/stats";
+import { createSession } from "@/lib/storage/sessions";
 
 export default function HomePage() {
+  // Auth + Dashboard state
+  const { user } = useAuth();
+  const [stats, setStatsState] = useState<DashboardStats>({ uploads: 0, studyMinutes: 0, musicGenerations: 0, quizzesTaken: 0 });
+  const [recents, setRecents] = useState<RecentSession[]>([]);
+  const [tracks, setTracks] = useState<RecentTrack[]>([]);
+
   // UI state
   const [isDragging, setIsDragging] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -16,9 +26,6 @@ export default function HomePage() {
 
   // File input ref
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  // Placeholder for sessions (empty for now)
-  const [sessions] = useState<Array<{ id: string; title: string; date: string }>>([]);
 
   // Drag & drop handlers (modal dropzone)
   const onDrop = async (e: React.DragEvent<HTMLDivElement>) => {
@@ -34,12 +41,13 @@ export default function HomePage() {
           // Post-process with Chrome Rewriter (or Gemini fallback) to structure notes
           const { text: structured, used } = await rewriteText(text.trim());
           const { title } = await generateTitle(text.trim());
-          sessionStorage.setItem("knotes_extracted_text", text.trim());
-          sessionStorage.setItem("knotes_structured_text", (structured || text).trim());
-          sessionStorage.setItem("knotes_title", title || "Study Notes");
-          console.log(`[Home] Structured notes via ${used}. Redirecting to /study.`);
+          const sess = createSession(title || "Study Notes", text.trim(), (structured || text).trim());
+          addRecentSession({ id: sess.id, title: sess.title, openedAt: new Date().toISOString(), href: `/study/${sess.id}` });
+          try { sessionStorage.setItem("knotes_current_session_id", sess.id); } catch {}
+          console.log(`[Home] Structured notes via ${used}. Redirecting to /study/${sess.id}.`);
+          try { incStat('uploads', 1); setStatsState(getStats()); } catch {}
           setIsModalOpen(false);
-          window.location.href = "/study";
+          window.location.href = `/study/${sess.id}`;
         } else {
           throw new Error("No text could be extracted from the document.");
         }
@@ -64,6 +72,15 @@ export default function HomePage() {
 
   const triggerFile = () => fileInputRef.current?.click();
 
+  // Hydrate dashboard data
+  useEffect(() => {
+    try {
+      setStatsState(getStats());
+      setRecents(getRecentSessions());
+      setTracks(getRecentTracks());
+    } catch {}
+  }, []);
+
   // Close on Escape
   useEffect(() => {
     if (!isModalOpen) return;
@@ -74,60 +91,129 @@ export default function HomePage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [isModalOpen]);
 
+  const displayName = (user?.displayName || user?.email || "there") as string;
+
+  const StatCard = ({ label, value }: { label: string; value: string | number }) => (
+    <div className="rounded-2xl ring-1 ring-black/5 dark:ring-white/10 bg-white/70 dark:bg-white/5 p-4 flex flex-col gap-1">
+      <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</div>
+      <div className="text-2xl font-semibold text-slate-900 dark:text-[--color-accent]">{value}</div>
+    </div>
+  );
+
+  function minutesToHrs(min: number) {
+    const hours = Math.floor(min / 60);
+    const rem = min % 60;
+    if (hours <= 0) return `${rem}m`;
+    if (rem === 0) return `${hours}h`;
+    return `${hours}h ${rem}m`;
+  }
+
   return (
     <main className="relative w-full min-h-screen">
       {/* Page container */}
       <div className="mx-auto w-full max-w-6xl px-5 pt-20 pb-24">
-        {/* Header */}
-        <section className="text-center mb-10">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold text-slate-900 dark:text-[--color-accent]">
-            Study smarter, not harder — with rhythm.
-          </h1>
-          <p className="mt-4 text-base sm:text-lg max-w-3xl mx-auto text-slate-700 dark:text-slate-300">
-            Combine AI study tools with curated music to enhance your focus and learning.
-          </p>
-        </section>
-
-        {/* Primary action */}
-        <section className="flex flex-col items-center justify-center text-center">
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center justify-center rounded-full bg-primary px-7 py-4 text-slate-900 font-medium shadow-[0_6px_0_rgba(0,0,0,0.08)] hover:shadow-[0_8px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px"
-            title="Upload a file or paste your notes to begin."
-            aria-describedby="upload-help"
-          >
-            📄 Upload/Paste Notes
-          </button>
+        {/* Header: Greeting + Primary Action */}
+        <section className="mb-10">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-semibold text-slate-900 dark:text-[--color-accent]">
+                Hello, {displayName.split("@")[0]}
+              </h1>
+              <p className="mt-2 text-slate-700 dark:text-slate-300">
+                Welcome back. Here’s a quick look at your study activity.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 text-slate-900 font-medium shadow-[0_6px_0_rgba(0,0,0,0.08)] hover:shadow-[0_8px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px"
+                title="Upload a file or paste your notes to begin."
+                aria-describedby="upload-help"
+              >
+                📄 Upload/Paste Notes
+              </button>
+            </div>
+          </div>
           <p id="upload-help" className="mt-3 max-w-2xl text-sm sm:text-base text-slate-600 dark:text-slate-300">
             Drag & drop a .txt, .pdf, or .docx file — or paste your notes. We’ll generate a personalized, focus-friendly soundtrack for your study session.
           </p>
         </section>
 
-        {/* Recent Sessions */}
-        <section className="mt-20">
-          <h2 className="text-center text-2xl md:text-3xl font-semibold text-slate-900 dark:text-[--color-accent] mb-4">
-            Recent Study Sessions
-          </h2>
+        {/* Stats Grid */}
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard label="Uploads" value={stats.uploads} />
+          <StatCard label="Study Time" value={minutesToHrs(Math.round(stats.studyMinutes))} />
+          <StatCard label="Music Generated" value={stats.musicGenerations} />
+          <StatCard label="Quizzes Taken" value={stats.quizzesTaken} />
+        </section>
 
-          {sessions.length === 0 ? (
-            <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-sm p-8 text-center text-slate-700 dark:text-slate-300">
-              <p className="flex items-center justify-center gap-2 text-base md:text-lg">
-                <FaClock className="text-primary" />
-                No sessions yet. Start by uploading your first notes!
-              </p>
-            </div>
-          ) : (
-            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sessions.map((s) => (
-                <li key={s.id} className="rounded-xl ring-1 ring-black/5 dark:ring-white/10 bg-white/70 dark:bg-white/5 p-4 hover:ring-primary/60">
-                  <button className="text-left w-full">
-                    <div className="font-medium text-slate-900 dark:text-[--color-accent]">{s.title}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">{s.date}</div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+        {/* Recent + Recently Played */}
+        <section className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+          {/* Left: Recent Study Sessions */}
+          <div>
+            <h2 className="text-left text-2xl md:text-3xl font-semibold text-slate-900 dark:text-[--color-accent] mb-4">
+              Recent Study Sessions
+            </h2>
+            {recents.length === 0 ? (
+              <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-sm p-8 text-center text-slate-700 dark:text-slate-300">
+                <p className="flex items-center justify-center gap-2 text-base md:text-lg">
+                  <FaClock className="text-primary" />
+                  No study sessions yet. Start by uploading your first notes!
+                </p>
+              </div>
+            ) : (
+              <ul className="space-y-3">
+                {recents.slice(0, 7).map((s) => (
+                  <li key={s.id} className="rounded-xl ring-1 ring-black/5 dark:ring-white/10 bg-white/70 dark:bg-white/5 p-4 hover:ring-primary/60 transition">
+                    {s.href ? (
+                      <Link href={s.href} className="block">
+                        <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{s.title}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">{new Date(s.openedAt).toLocaleString()}</div>
+                      </Link>
+                    ) : (
+                      <div className="block">
+                        <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{s.title}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">{new Date(s.openedAt).toLocaleString()}</div>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Right: Recently Played */}
+          <div>
+            <h2 className="text-left text-2xl md:text-3xl font-semibold text-slate-900 dark:text-[--color-accent] mb-4">
+              Recently Played
+            </h2>
+            {tracks.length === 0 ? (
+              <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-sm p-8 text-center text-slate-700 dark:text-slate-300">
+                <p className="flex items-center justify-center gap-2 text-base md:text-lg">
+                  <FaMusic className="text-primary" />
+                  No music played yet. Generate background sound from your study space!
+                </p>
+              </div>
+            ) : (
+              <ul className="space-y-3">
+                {tracks.slice(0, 7).map((t) => (
+                  <li key={t.id} className="rounded-xl ring-1 ring-black/5 dark:ring-white/10 bg-white/70 dark:bg-white/5 p-4 hover:ring-primary/60 transition">
+                    {t.href ? (
+                      <Link href={t.href} className="block">
+                        <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{t.title}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">{new Date(t.playedAt).toLocaleString()}</div>
+                      </Link>
+                    ) : (
+                      <div className="block">
+                        <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{t.title}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">{new Date(t.playedAt).toLocaleString()}</div>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </section>
       </div>
 
@@ -203,12 +289,14 @@ export default function HomePage() {
                           if (text && text.trim().length > 0) {
                             const { text: structured, used } = await rewriteText(text.trim());
                             const { title } = await generateTitle(text.trim());
-                            sessionStorage.setItem("knotes_extracted_text", text.trim());
-                            sessionStorage.setItem("knotes_structured_text", (structured || text).trim());
-                            sessionStorage.setItem("knotes_title", title || "Study Notes");
-                            console.log(`[Home] Structured notes via ${used}. Redirecting to /study.`);
+                            // Create persistent session with original+structured notes
+                            const sess = createSession(title || "Study Notes", text.trim(), (structured || text).trim());
+                            // Update recents with direct link
+                            addRecentSession({ id: sess.id, title: sess.title, openedAt: new Date().toISOString(), href: `/study/${sess.id}` });
+                            try { sessionStorage.setItem("knotes_current_session_id", sess.id); } catch {}
+                            try { incStat('uploads', 1); setStatsState(getStats()); } catch {}
                             setIsModalOpen(false);
-                            window.location.href = "/study";
+                            window.location.href = `/study/${sess.id}`;
                           } else {
                             throw new Error("No text could be extracted from the document.");
                           }
@@ -258,12 +346,12 @@ export default function HomePage() {
                     setUploading(true);
                     const { text: structured, used } = await rewriteText(text);
                     const { title } = await generateTitle(text);
-                    sessionStorage.setItem("knotes_extracted_text", text);
-                    sessionStorage.setItem("knotes_structured_text", (structured || text).trim());
-                    sessionStorage.setItem("knotes_title", title || "Study Notes");
-                    console.log(`[Home] Structured pasted notes via ${used}. Redirecting to /study.`);
+                    const sess = createSession(title || "Study Notes", text, (structured || text).trim());
+                    addRecentSession({ id: sess.id, title: sess.title, openedAt: new Date().toISOString(), href: `/study/${sess.id}` });
+                    try { sessionStorage.setItem("knotes_current_session_id", sess.id); } catch {}
+                    console.log(`[Home] Structured pasted notes via ${used}. Redirecting to /study/${sess.id}.`);
                     setIsModalOpen(false);
-                    window.location.href = "/study";
+                    window.location.href = `/study/${sess.id}`;
                   } catch (err: any) {
                     console.error(err);
                     setUploadError(err?.message || "Failed to process notes.");
