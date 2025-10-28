@@ -123,7 +123,12 @@ const MusicGenerator = ({ showLauncher = true, openSettingsSignal }: MusicGenera
       try { incStat('musicGenerations', 1); } catch {}
       try {
         const t = (trackTitle && trackTitle.trim().length > 0) ? trackTitle : `${newSettings.vibe} ${newSettings.genre}`;
-        addRecentTrack({ id: `${Date.now()}:${t}`, title: t, playedAt: new Date().toISOString(), href: '/study' });
+        let href: string | undefined = undefined;
+        try {
+          const sid = sessionStorage.getItem('knotes_current_session_id');
+          href = sid ? `/music/${sid}` : '/library?intent=music';
+        } catch {}
+        addRecentTrack({ id: `${Date.now()}:${t}`, title: t, playedAt: new Date().toISOString(), href });
       } catch {}
       // audioUrl remains undefined because we stream via WebAudio; MusicPlayer supports background waves/UI
       setAudioUrl(undefined);

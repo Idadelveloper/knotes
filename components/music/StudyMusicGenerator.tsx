@@ -71,7 +71,12 @@ const StudyMusicGenerator = () => {
     setAudioUrl(url);
     try {
       const { addRecentTrack } = await import("@/lib/stats");
-      addRecentTrack({ id: String(Date.now()), title, playedAt: new Date().toISOString(), href: "/music" });
+      let href: string | undefined = undefined;
+      try {
+        const sid = sessionStorage.getItem('knotes_current_session_id');
+        href = sid ? `/music/${sid}` : '/library?intent=music';
+      } catch {}
+      addRecentTrack({ id: String(Date.now()), title, playedAt: new Date().toISOString(), href });
     } catch {}
     setIsGenerating(false);
     setView("player");
