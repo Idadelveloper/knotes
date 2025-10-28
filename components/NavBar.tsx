@@ -19,7 +19,7 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
   const NavCenter = () => (
     <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-700 dark:text-[--color-accent]">
       <Link href="/library?intent=study" className="hover:text-slate-900 dark:hover:text-white">Study</Link>
-      <Link href="/library?intent=music" className="hover:text-slate-900 dark:hover:text-white">Music</Link>
+      <Link href="/music" className="hover:text-slate-900 dark:hover:text-white">Music</Link>
       <Link href="/library" className="hover:text-slate-900 dark:hover:text-white">Library</Link>
     </nav>
   );
@@ -89,7 +89,7 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
             {isAuth ? (
               <div className="flex flex-col gap-2">
                 <Link href="/library?intent=study" className="py-2 text-slate-800 dark:text-[--color-accent]">Study</Link>
-                <Link href="/library?intent=music" className="py-2 text-slate-800 dark:text-[--color-accent]">Music</Link>
+                <Link href="/music" className="py-2 text-slate-800 dark:text-[--color-accent]">Music</Link>
                 <Link href="/library" className="py-2 text-slate-800 dark:text-[--color-accent]">Library</Link>
                 <Link
                 href="/settings"
