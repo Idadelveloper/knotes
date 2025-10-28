@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PlaybackState } from '@/lib/types/music';
 import { BsFillPlayFill, BsFillPauseFill, BsFillRewindFill, BsFillFastForwardFill, BsMusicNoteBeamed, BsDownload, BsGear, BsChevronDown } from 'react-icons/bs';
+import { FaStepBackward, FaStepForward } from 'react-icons/fa';
 
 interface MusicPlayerProps {
   trackTitle: string;
@@ -14,6 +15,8 @@ interface MusicPlayerProps {
   onTweakSettings: () => void;
   onRegenerate: () => void;
   onDownload: () => void;
+  onNext?: () => void;
+  onPrev?: () => void;
 }
 
 const MusicPlayer = ({
@@ -26,6 +29,8 @@ const MusicPlayer = ({
   onTweakSettings,
   onRegenerate,
   onDownload,
+  onNext,
+  onPrev,
 }: MusicPlayerProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -82,7 +87,17 @@ const MusicPlayer = ({
     const onTime = () => setElapsedTime(Math.floor(audio.currentTime));
     const onEnded = () => {
       setElapsedTime(0);
-      try { onStop(); } catch {}
+      // Prefer advancing to next track if available; otherwise stop
+      try {
+        // @ts-expect-error optional callbacks exist on props
+        if (typeof (onNext as any) === 'function') {
+          (onNext as any)();
+        } else {
+          onStop();
+        }
+      } catch {
+        try { onStop(); } catch {}
+      }
     };
     audio.addEventListener('timeupdate', onTime);
     audio.addEventListener('ended', onEnded);
@@ -275,6 +290,11 @@ const MusicPlayer = ({
               </div>
             </div>
             <div className="flex items-center gap-4">
+              {onPrev && (
+                <button onClick={onPrev} title="Previous track" aria-label="Previous track" className="p-2 rounded-full hover:bg-white/10 transition-colors">
+                  <FaStepBackward size={18} />
+                </button>
+              )}
               <button onClick={() => skipBy(-15)} title="Rewind 15s" aria-label="Rewind 15 seconds" className="p-2 rounded-full hover:bg-white/10 transition-colors">
                 <BsFillRewindFill size={20} />
               </button>
@@ -284,6 +304,11 @@ const MusicPlayer = ({
               <button onClick={() => skipBy(15)} title="Forward 15s" aria-label="Forward 15 seconds" className="p-2 rounded-full hover:bg-white/10 transition-colors">
                 <BsFillFastForwardFill size={20} />
               </button>
+              {onNext && (
+                <button onClick={onNext} title="Next track" aria-label="Next track" className="p-2 rounded-full hover:bg-white/10 transition-colors">
+                  <FaStepForward size={18} />
+                </button>
+              )}
               <button onClick={onRegenerate} title="Regenerate" aria-label="Regenerate" className="p-2 rounded-full hover:bg-white/10 transition-colors">
                 {/* reuse regenerate as extra action */}
                 <BsChevronDown style={{ transform: 'rotate(180deg)' }} />
