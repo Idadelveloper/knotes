@@ -8,9 +8,11 @@ import { HiOutlineX } from "react-icons/hi";
 export type SelectDialogProps = {
   open: boolean;
   onClose: () => void;
+  mode?: 'music' | 'study';
+  onSelectSession?: (id: string) => void;
 };
 
-export default function SelectDialog({ open, onClose }: SelectDialogProps) {
+export default function SelectDialog({ open, onClose, mode = 'music', onSelectSession }: SelectDialogProps) {
   const router = useRouter();
   const [sessions, setSessions] = useState<{ id: string; title: string; createdAt: string }[]>([]);
 
@@ -30,6 +32,11 @@ export default function SelectDialog({ open, onClose }: SelectDialogProps) {
 
   const handleSelect = (id: string) => {
     try { sessionStorage.setItem("knotes_current_session_id", id); } catch {}
+    if (onSelectSession || mode === 'study') {
+      onSelectSession?.(id);
+      onClose?.();
+      return;
+    }
     onClose?.();
     router.push(`/music/${id}`);
   };

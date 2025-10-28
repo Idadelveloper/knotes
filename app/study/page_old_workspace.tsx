@@ -5,7 +5,7 @@ import { FaPlay, FaPause, FaStepForward, FaStepBackward, FaVolumeUp, FaSearch, F
 import HighlightToolbar from "@/components/HighlightToolbar";
 import { HiOutlineX } from "react-icons/hi";
 import ChatPanel from "@/components/ChatPanel";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import MusicGenerator from "@/components/music/MusicGenerator";
 import { useAuth } from "@/components/AuthProvider";
 import { getGeminiModel } from "@/lib/ai";
@@ -22,22 +22,6 @@ type Toast = { id: number; message: string };
 
 export default function StudyWorkspace() {
   const router = useRouter();
-  const params = useParams();
-  const routeId = Array.isArray((params as any)?.id) ? (params as any).id[0] : ((params as any)?.id as string | undefined);
-  // When arriving via /study/[id], populate sessionStorage for this session so the workspace can load content.
-  useEffect(() => {
-    if (!routeId) return;
-    try {
-      const sess = getSession(routeId);
-      if (sess) {
-        sessionStorage.setItem("knotes_current_session_id", sess.id);
-        sessionStorage.setItem("knotes_extracted_text", sess.originalText);
-        sessionStorage.setItem("knotes_structured_text", (sess.editableText || sess.structuredText || sess.originalText));
-        sessionStorage.setItem("knotes_title", sess.title || "Study Notes");
-      }
-    } catch {}
-  }, [routeId]);
-
   const { user } = useAuth();
   const userDisplay = (user?.displayName || user?.email || 'You') as string;
   // Editor refs/state
@@ -810,7 +794,7 @@ export default function StudyWorkspace() {
             <button
               aria-pressed={focusMode}
               onClick={() => setFocusMode(v => !v)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${focusMode ? 'bg-blue-500' : 'bg-slate-300'} ring-1 ring-black/10 dark:ring-white/10`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${focusMode ? 'bg-blue-500' : 'bg-slate-300'} ring-1 ring-black/10 dark:ring:white/10`}
               title="Hide menus and darken UI"
             >
               <span
@@ -895,7 +879,7 @@ export default function StudyWorkspace() {
                               if (notesMarkdown) {
                                 setMdEditing(notesMarkdown);
                               } else if (editorRef.current) {
-                                (editorRef.current as any).innerHTML = notesContentHtml || '';
+                                editorRef.current.innerHTML = notesContentHtml || '';
                               }
                             }, 0);
                           }}
@@ -962,8 +946,8 @@ export default function StudyWorkspace() {
                               return;
                             }
                             const el = editorRef.current;
-                            const html = el ? (el as any).innerHTML : notesContentHtml;
-                            const plain = el ? ((el as any).innerText || (el as any).textContent || '').trim() : editorText;
+                            const html = el ? el.innerHTML : notesContentHtml;
+                            const plain = el ? (el.innerText || el.textContent || '').trim() : editorText;
                             setNotesContentHtml(html || '');
                             setEditorText(plain);
                             // Persist HTML-based edits for non-Markdown sessions
@@ -975,12 +959,12 @@ export default function StudyWorkspace() {
                           Save
                         </button>
                         <button
-                          className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-black/10 px-3 py-1.5 text-slate-800 hover:bg-white/80"
+                          className="inline-flex items-center gap-2 rounded-full bg:white ring-1 ring-black/10 px-3 py-1.5 text-slate-800 hover:bg-white/80"
                           onClick={() => {
                             setIsEditingNotes(false);
                             if (!notesMarkdown) {
                               // revert DOM to saved HTML
-                              if (editorRef.current) (editorRef.current as any).innerHTML = notesContentHtml || '';
+                              if (editorRef.current) editorRef.current.innerHTML = notesContentHtml || '';
                             }
                           }}
                         >
@@ -1007,11 +991,11 @@ export default function StudyWorkspace() {
 
                   {isEditingNotes && (
                     notesMarkdown ? (
-                      <div ref={editorRef} className="min-h-[500px] max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 p-2 bg-white">
+                      <div ref={editorRef} className="min-h-[500px] max-h-[60vh] overflow-y:auto rounded-xl border border-gray-200 p-2 bg-white">
                         <MDEditor
                           value={mdEditing}
                           onChange={(val) => setMdEditing(val || "")}
-                          height={Math.max(500, Math.min(800, typeof window !== 'undefined' ? window.innerHeight * 0.6 : 600))}
+                          height={Math.max(500, Math.min(800, window.innerHeight * 0.6))}
                         />
                       </div>
                     ) : (
@@ -1085,19 +1069,19 @@ export default function StudyWorkspace() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Request context (optional)</label>
-                      <input className="w-full rounded-lg bg-white ring-1 ring-black/10 px-3 py-2 text-slate-800" placeholder="e.g., Audience is junior developers" value={requestContext} onChange={(e) => setRequestContext((e.target as HTMLInputElement).value)} />
+                      <input className="w-full rounded-lg bg:white ring-1 ring-black/10 px-3 py-2 text-slate-800" placeholder="e.g., Audience is junior developers" value={requestContext} onChange={(e) => setRequestContext((e.target as HTMLInputElement).value)} />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Expected input languages (CSV)</label>
-                      <input className="w-full rounded-lg bg-white ring-1 ring-black/10 px-3 py-2 text-slate-800" placeholder="en,ja,es" value={expectedInputLanguages} onChange={(e) => setExpectedInputLanguages((e.target as HTMLInputElement).value)} />
+                      <input className="w-full rounded-lg bg:white ring-1 ring-black/10 px-3 py-2 text-slate-800" placeholder="en,ja,es" value={expectedInputLanguages} onChange={(e) => setExpectedInputLanguages((e.target as HTMLInputElement).value)} />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Expected context languages (CSV)</label>
-                      <input className="w-full rounded-lg bg-white ring-1 ring-black/10 px-3 py-2 text-slate-800" placeholder="en" value={expectedContextLanguages} onChange={(e) => setExpectedContextLanguages((e.target as HTMLInputElement).value)} />
+                      <input className="w-full rounded-lg bg:white ring-1 ring-black/10 px-3 py-2 text-slate-800" placeholder="en" value={expectedContextLanguages} onChange={(e) => setExpectedContextLanguages((e.target as HTMLInputElement).value)} />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Output language (optional)</label>
-                      <input className="w-full rounded-lg bg-white ring-1 ring-black/10 px-3 py-2 text-slate-800" placeholder="e.g., es" value={outputLanguage} onChange={(e) => setOutputLanguage((e.target as HTMLInputElement).value)} />
+                      <input className="w-full rounded-lg bg:white ring-1 ring-black/10 px-3 py-2 text-slate-800" placeholder="e.g., es" value={outputLanguage} onChange={(e) => setOutputLanguage((e.target as HTMLInputElement).value)} />
                     </div>
                   </div>
 
@@ -1149,7 +1133,7 @@ export default function StudyWorkspace() {
                       <label htmlFor="target-lang" className="block text-sm font-medium text-slate-700 mb-1">Target language</label>
                       <select
                         id="target-lang"
-                        className="w-full md:w-64 rounded-lg bg-white ring-1 ring-black/10 px-3 py-2 text-slate-800"
+                        className="w-full md:w-64 rounded-lg bg:white ring-1 ring-black/10 px-3 py-2 text-slate-800"
                         value={translateLang}
                         onChange={(e) => setTranslateLang((e.target as HTMLSelectElement).value)}
                       >
@@ -1170,7 +1154,7 @@ export default function StudyWorkspace() {
                           ['tr','Turkish'],
                           ['nl','Dutch']
                         ].map(([code, label]) => (
-                          <option key={code as string} value={code as string}>{label as string} ({code as string})</option>
+                          <option key={code} value={code as string}>{label} ({code as string})</option>
                         ))}
                       </select>
                       <p className="mt-1 text-xs text-slate-500">Choose the language and click Translate. You can translate again into another language anytime.</p>
@@ -1228,7 +1212,7 @@ export default function StudyWorkspace() {
               {notesTab === 'voice' && (
                 <div className="rounded-xl border border-gray-200 p-4 bg-white/70">
                   <p className="text-slate-700">Use Voice Read to listen to your entire notes content. This uses your browser's built-in text-to-speech.</p>
-                  <div className="mt-3 flex items-center gap-2">
+                  <div className="mt-3 flex items:center gap-2">
                     {!ttsSpeaking ? (
                       <button className="rounded-full bg-primary px-4 py-2 text-slate-900" onClick={speakAll}>Start Reading</button>
                     ) : (
@@ -1387,7 +1371,7 @@ export default function StudyWorkspace() {
                     min={1}
                     max={180}
                     value={customMinutes}
-                    onChange={(e) => setCustomMinutes(Math.max(1, Math.min(180, Number((e.target as HTMLInputElement).value) || 0)))}
+                    onChange={(e) => setCustomMinutes(Math.max(1, Math.min(180, Number(e.target.value) || 0)))}
                     className="w-24 rounded-lg bg-white/80 dark:bg-white/5 ring-1 ring-black/10 dark:ring-white/10 p-2 text-slate-900 dark:text-[--color-accent]"
                   />
                 </div>
@@ -1397,7 +1381,7 @@ export default function StudyWorkspace() {
                 <input
                   type="checkbox"
                   checked={showCountdown}
-                  onChange={(e) => setShowCountdown((e.target as HTMLInputElement).checked)}
+                  onChange={(e) => setShowCountdown(e.target.checked)}
                 />
                 Show countdown in header
               </label>
@@ -1467,7 +1451,7 @@ export default function StudyWorkspace() {
         >
           <div className="absolute inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm" />
           <div className="relative z-10 w-full max-w-2xl rounded-3xl bg-accent/95 dark:bg-[--color-dark-bg]/95 ring-1 ring-black/10 dark:ring-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.25)]">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-black/10 dark:border-white/10 gap-3">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-black/10 dark:border:white/10 gap-3">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent]">AI Assistant</h3>
               <div className="inline-flex rounded-full bg-white/50 dark:bg-white/10 p-1">
                 <TabBtn active={aiTab === "explain"} onClick={() => setAiTab("explain")}>
@@ -1485,7 +1469,7 @@ export default function StudyWorkspace() {
               </div>
               <button
                 aria-label="Close"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-black/10 dark:ring-white/10 bg-white/70 dark:bg-white/5 text-slate-700 dark:text-[--color-accent] hover:bg-white/80"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-black/10 dark:ring:white/10 bg-white/70 dark:bg-white/5 text-slate-700 dark:text-[--color-accent] hover:bg-white/80"
                 onClick={() => setAiOpen(false)}
               >
                 <HiOutlineX size={18} />
@@ -1564,7 +1548,7 @@ function Panel({ title, open, onToggle, onCopy, children }: {
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
-      className={`px-3 py-1 rounded-full text-sm ${active ? "bg-primary text-slate-900" : "text-slate-700 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-white/10"}`}
+      className={`px-3 py-1 rounded-full text-sm ${active ? "bg-primary text-slate-900" : "text-slate-700 dark:text-slate-200 hover:bg-white/60 dark:hover:bg:white/10"}`}
       onClick={onClick}
     >
       {children}
