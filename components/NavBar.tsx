@@ -18,19 +18,19 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
 
   const NavCenter = () => (
     <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-700 dark:text-[--color-accent]">
-      <Link href="/study" className="hover:text-slate-900 dark:hover:text-white">Study</Link>
-      <Link href="/music" className="hover:text-slate-900 dark:hover:text-white">Music</Link>
-      <Link href="#" className="hover:text-slate-900 dark:hover:text-white">History</Link>
+      <Link href="/study" title="Go to Study Space" className="hover:text-slate-900 dark:hover:text-white">Study</Link>
+      <Link href="/music" title="Generate Study Music" className="hover:text-slate-900 dark:hover:text-white">Music</Link>
+      <Link href="#" title="View Study History" className="hover:text-slate-900 dark:hover:text-white">History</Link>
     </nav>
   );
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-transparent dark:bg-transparent backdrop-blur">
+    <header className="sticky top-0 z-40 w-full bg-white dark:bg-white backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-4 sm:px-6">
         {/* Left: Logo */}
         <Link href="/" className="flex items-center gap-2">
           <Image
-            src="/images/logo.png"
+            src="/images/knoteslogo.png"
             alt="Knotes logo"
             width={32}
             height={32}
@@ -52,17 +52,21 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
             {isAuth ? (
               <Link
                 href="/settings"
-                className="inline-flex items-center gap-2 rounded-xl bg-secondary/70 px-3 py-2 text-slate-900 shadow-[0_3px_0_rgba(0,0,0,0.06)] hover:shadow-[0_4px_0_rgba(0,0,0,0.08)] hover:brightness-105 active:translate-y-px active:shadow-[0_2px_0_rgba(0,0,0,0.1)]"
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-100 px-3 py-2 text-slate-900 shadow-[0_3px_0_rgba(0,0,0,0.06)] hover:shadow-[0_4px_0_rgba(0,0,0,0.08)] hover:brightness-105 active:translate-y-px active:shadow-[0_2px_0_rgba(0,0,0,0.1)]"
               >
                 <FaUserCircle className="text-slate-700" />
-                <span className="font-medium">Profile</span>
+               
               </Link>
             ) : (
               <Link
+                title="Login" 
                 href="/login"
-                className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-slate-900 font-medium shadow-[0_4px_0_rgba(0,0,0,0.08)] transition hover:shadow-[0_6px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px active:shadow-[0_3px_0_rgba(0,0,0,0.1)]"
-              >
-                Login
+                className="inline-flex items-center justify-center rounded-xl bg-transparent px-4 py-2 text-slate-900 font-medium shadow-[0_4px_0_rgba(0,0,0,0.08)] transition hover:shadow-[0_6px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px active:shadow-[0_3px_0_rgba(0,0,0,0.1)]"
+              >            
+                <svg className="w-6 h-6 text-blue-300 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#224971" viewBox="0 0 24 24">
+                  <path fill-rule="evenodd" d="M12 20a7.966 7.966 0 0 1-5.002-1.756l.002.001v-.683c0-1.794 1.492-3.25 3.333-3.25h3.334c1.84 0 3.333 1.456 3.333 3.25v.683A7.966 7.966 0 0 1 12 20ZM2 12C2 6.477 6.477 2 12 2s10 4.477 10 10c0 5.5-4.44 9.963-9.932 10h-.138C6.438 21.962 2 17.5 2 12Zm10-5c-1.84 0-3.333 1.455-3.333 3.25S10.159 13.5 12 13.5c1.84 0 3.333-1.455 3.333-3.25S13.841 7 12 7Z" clip-rule="evenodd"/>
+                </svg>
+                
               </Link>
             )}
           </div>
@@ -92,7 +96,7 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
                 className="mt-2 inline-flex w-max items-center gap-2 rounded-xl bg-secondary/70 px-3 py-2 text-slate-900 shadow-[0_3px_0_rgba(0,0,0,0.06)]"
               >
                   <FaUserCircle className="text-slate-700" />
-                  <span className="font-medium">Profile</span>
+                
                 </Link>
               </div>
             ) : (
@@ -100,9 +104,14 @@ export default function NavBar({ isAuthenticated = false }: NavBarProps) {
                 <span className="text-slate-700 dark:text-[--color-accent] font-medium">Welcome</span>
                 <Link
                   href="/login"
-                  className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-slate-900 font-medium shadow-[0_4px_0_rgba(0,0,0,0.08)]"
+                   title="Login" 
+                  className="inline-flex items-center justify-center rounded-xl bg-transparent px-4 py-2 text-slate-900 font-medium shadow-[0_4px_0_rgba(0,0,0,0.08)] transition hover:shadow-[0_6px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px active:shadow-[0_3px_0_rgba(0,0,0,0.1)]"
                 >
-                  Login
+                  
+                  <svg className="w-6 h-6 text-gray-800 dark:text-white " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                    <path fillRule="evenodd" d="M12 20a7.966 7.966 0 0 1-5.002-1.756l.002.001v-.683c0-1.794 1.492-3.25 3.333-3.25h3.334c1.84 0 3.333 1.456 3.333 3.25v.683A7.966 7.966 0 0 1 12 20ZM2 12C2 6.477 6.477 2 12 2s10 4.477 10 10c0 5.5-4.44 9.963-9.932 10h-.138C6.438 21.962 2 17.5 2 12Zm10-5c-1.84 0-3.333 1.455-3.333 3.25S10.159 13.5 12 13.5c1.84 0 3.333-1.455 3.333-3.25S13.841 7 12 7Z" clipRule="evenodd"/>
+                  </svg>
+
                 </Link>
               </div>
             )}
