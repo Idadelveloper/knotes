@@ -31,7 +31,7 @@ export default function Landing() {
       </div>
 
       {/* Hero Section */}
-      <section className="mx-auto flex min-h-[70vh] w-full max-w-6xl flex-col items-center justify-center px-6 pt-20 pb-16 text-center">
+      <section className="mx-auto flex min-h-[50vh] w-full max-w-6xl flex-col items-center justify-center px-6 pt-10 pb-10 text-center">
     <h1 className="max-w-4xl text-4xl sm:text-5xl md:text-6xl font-semibold leading-tight text-slate-900 dark:text-[--color-accent] text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-blue-600"
         >
           Where knowledge meets notes, in perfect harmony.
@@ -40,24 +40,13 @@ export default function Landing() {
           A clever fusion of study notes and music notes. Get AI-powered explanations, focus music, and turn your learning into rhythm.
         </p>
         <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">
-          <a
-            href="#"
-            className="inline-flex items-center justify-center rounded-full bg-primary px-7 py-3 text-slate-900 shadow-[0_6px_0_rgba(0,0,0,0.08)] hover:shadow-[0_8px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px"
-          >
-            Upload Notes
-          </a>
-          <a
-            href="#"
-            className="inline-flex items-center justify-center rounded-full px-7 py-3 text-primary ring-2 ring-primary hover:bg-primary/10 active:translate-y-px"
-          >
-            Start Studying
-          </a>
+         
         </div>
       </section>
 
       {/* HOW IT WORKS Section */}
       <section className="mx-auto w-full max-w-6xl px-6 pb-24">
-        <h2 className="mb-8 text-center text-xs tracking-[0.35em] text-slate-700 dark:text-slate-300">HOW IT WORKS</h2>
+
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <FeatureCard
             icon={<FaBrain size={24} />}
