@@ -189,7 +189,7 @@ export default function CollectionStudyPage() {
             </div>
           ) : (
             // The StudyWorkspace reads from sessionStorage and will reflect the active session
-            <StudyWorkspace />
+            <StudyWorkspace key={activeSessionId} />
           )}
         </section>
       </div>
