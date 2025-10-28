@@ -15,6 +15,14 @@ import {
     FaRegLightbulb,
 } from "react-icons/fa";
 import { HiOutlineX } from "react-icons/hi";
+import MusicPlayer from "@/components/music/MusicPlayer";
+import PlaylistModal from "@/components/music/PlaylistModal";
+import { composeSongDetailed } from "@/lib/eleven";
+import { generateLyricsFromNotes, buildMusicPromptFromControls } from "@/lib/lyrics";
+import { generateTrackName } from "@/lib/writer";
+import { addRecentTrack, getRecentTracks } from "@/lib/stats";
+import { getGeminiModel } from "@/lib/ai";
+import { addTrack } from "@/lib/storage/music";
 
 // Simple toast messages (local, minimal)
 type Toast = { id: number; message: string };
@@ -44,6 +52,27 @@ type Energy = "Low" | "Medium" | "High";
 const INSTRUMENTS = ["Piano", "Guitar", "Synth", "Rain", "Strings", "Bass", "Waves"] as const;
 
 export default function MusicPage() {
+    const { id } = (require('next/navigation') as any).useParams?.() || {};
+    const [notes, setNotes] = useState<string>('');
+    const [sessionTitle, setSessionTitle] = useState<string>('');
+
+    useEffect(() => {
+        if (!id) return;
+        try {
+            const { getSession } = require('@/lib/storage/sessions');
+            const sid = Array.isArray(id) ? id[0] : id;
+            const sess = getSession(sid);
+            if (sess) {
+                setSessionTitle(sess.title || 'Study Notes');
+                setNotes(sess.editableText || sess.structuredText || sess.originalText || '');
+                // Load last saved song title for this session if present
+                try {
+                    const saved = localStorage.getItem(`knotes_song_title_${sid}`);
+                    if (saved) setTrackTitle(saved);
+                } catch {}
+            }
+        } catch {}
+    }, [id]);
     // Background toasts
     const [toasts, setToasts] = useState<Toast[]>([]);
     const pushToast = (message: string) => {
@@ -51,6 +80,40 @@ export default function MusicPage() {
         setToasts((t) => [...t, { id, message }]);
         setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2200);
     };
+
+    // Helper: generate topics list from notes via Writer → Gemini fallback
+    async function generateTopicsFromNotes(text: string): Promise<string[]> {
+        const cleaned = (text || '').slice(0, 8000);
+        try {
+            const g: any = typeof window !== 'undefined' ? window : null;
+            if (g && 'Writer' in g) {
+                try {
+                    const writer: any = await g.Writer.create({
+                        tone: 'neutral',
+                        format: 'plain-text',
+                        length: 'short',
+                        sharedContext: 'You extract study topics succinctly as bullet items.'
+                    });
+                    const out: string = await writer.write(
+                        `From the following study notes, extract 5–12 concise topics/sections as a plain list (one per line). Return only the topics without numbering.\n\n${cleaned}`,
+                        { context: 'Return just the list, one topic per line.' }
+                    );
+                    writer.destroy?.();
+                    const lines = out.split(/\r?\n/).map(s => s.trim()).filter(Boolean).slice(0, 12);
+                    if (lines.length) return lines;
+                } catch {}
+            }
+        } catch {}
+        try {
+            const model = getGeminiModel('gemini-2.5-flash');
+            const prompt = `Extract 5–12 concise topics covered in these study notes. Return only a plain list, one topic per line, no numbering.\n\n${cleaned}`;
+            const res = await model.generateContent(prompt as any);
+            const txt: string = (res?.response?.text?.() as string) || '';
+            const lines = txt.split(/\r?\n/).map(s => s.replace(/^[-*\d.\s]+/, '').trim()).filter(Boolean).slice(0, 12);
+            return lines;
+        } catch {}
+        return [];
+    }
 
     // Topics (mock detected)
     const [topics, setTopics] = useState<string[]>([
@@ -80,11 +143,173 @@ export default function MusicPage() {
     const steps = ["Analyzing notes", "Writing lyrics", "Composing music", "Synthesizing vocals"];
     const [previewOpen, setPreviewOpen] = useState(false);
     const [trackTitle, setTrackTitle] = useState<string>("");
+    const previewRef = useRef<HTMLDivElement | null>(null);
 
-    // Player state (mock)
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [progress, setProgress] = useState(0); // 0..100
+    // Real player state using MusicPlayer
+    const [playbackState, setPlaybackState] = useState<'playing' | 'paused' | 'stopped' | 'loading'>("stopped");
+    const [audioUrl, setAudioUrl] = useState<string | undefined>(undefined);
+    const [progress, setProgress] = useState(0); // for legacy bar (kept for top progress bar only)
     const progressRef = useRef<number>(0);
+
+    const [recentTracks, setRecentTracks] = useState(() => getRecentTracks());
+    // Manual topics input
+    const [manualTopics, setManualTopics] = useState<string>("");
+    // Track persistence for playlists
+    const [currentTrackId, setCurrentTrackId] = useState<string | null>(null);
+    const [playlistOpen, setPlaylistOpen] = useState<boolean>(false);
+
+    async function generateSong() {
+        if (!notes) {
+            pushToast('No notes available for this session.');
+            return;
+        }
+        try {
+            setIsGenerating(true);
+            setGenStep(0);
+            setPreviewOpen(false);
+            setPlaybackState('loading');
+            setAudioUrl(undefined);
+
+            // 1) Build description for title
+            const instrumentList = Object.keys(instrumentMix).filter((k) => instrumentMix[k]);
+            const desc = `${mood} ${genre} • ${energy} energy ${tempo} BPM${instrumentList.length ? ' • ' + instrumentList.join(', ') : ''}`;
+            try {
+                const { title } = await generateTrackName({ description: desc, context: `Notes title: ${sessionTitle}` });
+                setTrackTitle(title);
+                try { if (id) localStorage.setItem(`knotes_song_title_${Array.isArray(id)?id[0]:id}`, title); } catch {}
+            } catch {
+                const fallbackTitle = `${mood} ${genre}`;
+                setTrackTitle(fallbackTitle);
+                try { if (id) localStorage.setItem(`knotes_song_title_${Array.isArray(id)?id[0]:id}`, fallbackTitle); } catch {}
+            }
+            setGenStep(1);
+
+            // 2) Generate lyrics (based on entire lecture)
+            let lyrics = '';
+            try {
+                lyrics = await generateLyricsFromNotes({
+                    notes,
+                    genre,
+                    mood,
+                    tempoBpm: Math.round(tempo),
+                    energy,
+                    instruments: instrumentList,
+                    style: lyricsMode,
+                    singer,
+                    totalLengthSec: lengthSec,
+                    manualTopics: manualTopics,
+                });
+                if (lyrics && lyrics.trim()) setLyricsText(lyrics.trim());
+            } catch {}
+            setGenStep(2);
+
+            // Generate topics for "Notes Covered"
+            try {
+                setTopicsLoading(true);
+                const topics = await generateTopicsFromNotes(notes);
+                setTopicsCovered(topics);
+            } catch {}
+            finally { setTopicsLoading(false); }
+
+            // 3) Build music prompt
+            const prompt = buildMusicPromptFromControls({
+                notes,
+                lyrics,
+                genre,
+                mood,
+                tempoBpm: Math.round(tempo),
+                energy,
+                instruments: instrumentList,
+                singer,
+                forceInstrumental: false,
+                lyricStyle: lyricsMode,
+                durationSec: lengthSec,
+                manualTopics: manualTopics,
+            });
+
+            // 4) Compose via ElevenLabs
+            const lengthMs = Math.max(3000, Math.min(300000, Math.round(lengthSec * 1000)));
+            try {
+                const res = await composeSongDetailed({ prompt, musicLengthMs: lengthMs, forceInstrumental: false });
+                setGenStep(3);
+                setAudioUrl(res.blobUrl);
+                setPreviewOpen(true);
+                setIsGenerating(false);
+                setPlaybackState('playing');
+                pushToast('🎶 Song ready');
+                // Persist track entity for playlist usage
+                try {
+                    const sid = Array.isArray(id) ? id[0] : id;
+                    const tTitle = (trackTitle && trackTitle.trim()) ? trackTitle : `${mood} ${genre}`;
+                    const track = addTrack({ title: tTitle, sessionId: sid, kind: 'lyrics', audioUrl: res.blobUrl, lyrics: lyrics });
+                    setCurrentTrackId(track.id);
+                } catch {}
+                // Save recent track with generated title
+                try {
+                    const sid = Array.isArray(id) ? id[0] : id;
+                    const href = sid ? `/music/${sid}` : undefined;
+                    const t = (trackTitle && trackTitle.trim()) ? trackTitle : `${mood} ${genre}`;
+                    addRecentTrack({ id: `${Date.now()}:${t}`, title: t, playedAt: new Date().toISOString(), href });
+                    setRecentTracks(getRecentTracks());
+                } catch {}
+                // Auto-scroll to preview/lyrics section (player will appear when audio is ready)
+                try { previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+            } catch (err: any) {
+                // Retry once with suggestion if bad_prompt
+                if (err && err.code === 'bad_prompt' && err.suggestion) {
+                    try {
+                        const res2 = await composeSongDetailed({ prompt: err.suggestion, musicLengthMs: lengthMs, forceInstrumental: false });
+                        setAudioUrl(res2.blobUrl);
+                        setPreviewOpen(true);
+                        setIsGenerating(false);
+                        setPlaybackState('playing');
+                        pushToast('🎶 Song ready');
+                        // Save recent track with generated title (retry path)
+                        try {
+                            const sid = Array.isArray(id) ? id[0] : id;
+                            const href = sid ? `/music/${sid}` : undefined;
+                            const t = (trackTitle && trackTitle.trim()) ? trackTitle : `${mood} ${genre}`;
+                            addRecentTrack({ id: `${Date.now()}:${t}`, title: t, playedAt: new Date().toISOString(), href });
+                            setRecentTracks(getRecentTracks());
+                        } catch {}
+                        // Persist track entity for playlist usage (retry path)
+                        try {
+                            const sid = Array.isArray(id) ? id[0] : id;
+                            const tTitle = (trackTitle && trackTitle.trim()) ? trackTitle : `${mood} ${genre}`;
+                            const track = addTrack({ title: tTitle, sessionId: sid, kind: 'lyrics', audioUrl: res2.blobUrl, lyrics: lyrics });
+                            setCurrentTrackId(track.id);
+                        } catch {}
+                        try { previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+                        return;
+                    } catch {}
+                }
+                throw err;
+            }
+        } catch (e: any) {
+            console.error('Generate song failed', e);
+            pushToast(e?.message || 'Failed to generate song');
+            setIsGenerating(false);
+            setPlaybackState('stopped');
+        }
+    }
+
+    function handlePlayPause() {
+        setPlaybackState((s) => (s === 'playing' ? 'paused' : 'playing'));
+    }
+    function handleStop() {
+        setPlaybackState('stopped');
+    }
+    function handleRegenerate() { generateSong(); }
+    function handleDownload() {
+        if (!audioUrl) return;
+        const a = document.createElement('a');
+        a.href = audioUrl;
+        a.download = `${(trackTitle || 'study-track').replace(/[^a-z0-9-_ ]/gi, '')}.mp3`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+    function handleTweak() { pushToast('Open tweak panel'); }
 
     // Tiny sample sound for genre/mood preview (optional)
     const audioCtxRef = useRef<AudioContext | null>(null);
@@ -134,48 +359,6 @@ export default function MusicPage() {
         }
     };
 
-    // Simulate generation workflow
-    const startGeneration = (playlist = false) => {
-        if (selectedTopics.size === 0) {
-            pushToast("Select at least one topic");
-            return;
-        }
-        setIsGenerating(true);
-        setGenStep(0);
-        setPreviewOpen(false);
-        setTrackTitle("");
-        let s = 0;
-        const interval = setInterval(() => {
-            s += 1;
-            setGenStep(s);
-            if (s >= steps.length) {
-                clearInterval(interval);
-                const titleFromTopic = Array.from(selectedTopics)[0] || "Study Session";
-                const autoTitle = `${adjectiveForMood(mood)} ${genre} — ${titleFromTopic}`;
-                setTrackTitle(autoTitle);
-                setIsGenerating(false);
-                setPreviewOpen(true);
-                setIsPlaying(true);
-                progressRef.current = 0;
-                setProgress(0);
-            }
-        }, 900);
-        pushToast(playlist ? "🎵 Generating playlist…" : "🎵 Generating track…");
-    };
-
-    // Fake player progress
-    useEffect(() => {
-        if (!isPlaying) return;
-        const id = setInterval(() => {
-            progressRef.current = Math.min(100, progressRef.current + 1.4);
-            setProgress(progressRef.current);
-            if (progressRef.current >= 100) {
-                clearInterval(id);
-                setIsPlaying(false);
-            }
-        }, 300);
-        return () => clearInterval(id);
-    }, [isPlaying]);
 
     const toggleTopic = (t: string) => {
         setSelectedTopics((prev) => {
@@ -227,11 +410,8 @@ export default function MusicPage() {
     const [lyricsText, setLyricsText] = useState<string>(
         `Verse 1:\nCells hum softly in the night, ATP begins to rise,\nMitochondria light the way, power in disguise.\n\nChorus:\nEnergy flows, let your mind unwind,\nFocus beats guide the working mind.`
     );
-    const [notesCovered] = useState<string[]>([
-        'ATP production via cellular respiration',
-        'Role of mitochondria as energy centers',
-        'Overfitting & Regularization as study topics',
-    ]);
+    const [topicsCovered, setTopicsCovered] = useState<string[]>([]);
+const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
 
     const genreChange = (g: (typeof GENRES)[number]) => {
         setGenre(g);
@@ -247,7 +427,7 @@ export default function MusicPage() {
     };
 
     // Song config additional state
-    const [scope, setScope] = useState<'all' | 'topics'>('topics');
+    const [scope, setScope] = useState<'all' | 'topics'>('all');
     const [singer, setSinger] = useState<'Male' | 'Female' | 'Duet' | 'AI Voice' | 'Robotic / Filtered'>('AI Voice');
     const [lyricsMode, setLyricsMode] = useState<'summary' | 'educational' | 'mix'>('mix');
     const [lengthSec, setLengthSec] = useState<number>(120); // 2 min default
@@ -265,7 +445,7 @@ export default function MusicPage() {
         return () => clearInterval(id);
     }, [isGenerating]);
 
-    const isReady = scope === 'all' ? true : selectedTopics.size > 0;
+    const isReady = !!notes;
 
     return (
         <main className="relative w-full min-h-screen pb-36">
@@ -306,17 +486,7 @@ export default function MusicPage() {
                         <div className="rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur p-6 shadow-md ring-1 ring-black/5 dark:ring-white/10 transition-transform hover:-translate-y-0.5">
                             <h2 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent] mb-3">Song Scope</h2>
                             <div className="flex flex-col gap-2 text-sm">
-                                <label className="inline-flex items-center gap-2 text-slate-800 dark:text-[--color-accent]">
-                                    <input type="radio" name="scope" checked={scope==='all'} onChange={() => setScope('all')} />
-                                    Generate Song for Entire Lecture
-                                </label>
-                                <label className="inline-flex items-center gap-2 text-slate-800 dark:text-[--color-accent]">
-                                    <input type="radio" name="scope" checked={scope==='topics'} onChange={() => setScope('topics')} />
-                                    Generate Song for Selected Topic(s)
-                                </label>
-                                {scope === 'topics' && (
-                                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Choose detected topics below. AI identifies topics/subtopics.</p>
-                                )}
+                                <div className="text-sm text-slate-700 dark:text-slate-300">Generating based on the entire lecture/upload.</div>
                             </div>
                         </div>
 
@@ -473,6 +643,18 @@ export default function MusicPage() {
                                 <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">You can preview generated lyrics before full song generation.</p>
                             </div>
 
+                            {/* Manual Topics Input */}
+                            <div className="mt-4">
+                                <label className="text-xs text-slate-600 dark:text-slate-300">Areas/Topics to cover (optional)</label>
+                                <textarea
+                                  value={manualTopics}
+                                  onChange={(e) => setManualTopics(e.target.value)}
+                                  placeholder="e.g. Backpropagation, Gradient Descent vs Adam, Overfitting, Regularization"
+                                  className="mt-1 w-full rounded-lg bg-white/80 dark:bg-white/10 ring-1 ring-black/10 dark:ring-white/10 p-2 text-sm min-h-20"
+                                />
+                                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">These topics will be prioritized in the lyrics and music prompt.</p>
+                            </div>
+
                             {/* Instruments */}
                             <div className="mt-4">
                                 <div className="text-xs text-slate-600 dark:text-slate-300 mb-2">Instrument Mix</div>
@@ -500,28 +682,12 @@ export default function MusicPage() {
                             {/* Compose CTA */}
                             <div className="mt-6 flex flex-wrap items-center gap-3">
                                 <button
-                                    onClick={() => startGeneration(false)}
+                                    onClick={() => generateSong()}
                                     disabled={isGenerating || !isReady}
                                     className={`inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-slate-900 font-medium shadow-[0_4px_0_rgba(0,0,0,0.08)] disabled:opacity-60 ${!isGenerating && isReady ? 'animate-pulse' : ''}`}
                                     title="Generate a full song from your notes"
                                 >
                                     <FaMusic /> Generate Song
-                                </button>
-                                <button
-                                    onClick={() => startGeneration(true)}
-                                    disabled={isGenerating || !isReady}
-                                    className="inline-flex items-center gap-2 rounded-xl bg-white ring-1 ring-black/10 px-5 py-2.5 text-slate-900 dark:bg-white/10 dark:text-[--color-accent] dark:ring-white/10 disabled:opacity-60"
-                                    title="Create a playlist from selected topics"
-                                >
-                                    <FaHeadphones /> Generate Playlist
-                                </button>
-                                <button
-                                    onClick={() => pushToast('📝 Generating sample lyrics…')}
-                                    disabled={isGenerating}
-                                    className="inline-flex items-center gap-2 rounded-xl bg-white ring-1 ring-black/10 px-4 py-2 text-slate-900 dark:bg-white/10 dark:text-[--color-accent] dark:ring-white/10"
-                                    title="Preview generated lyrics without full rendering"
-                                >
-                                    ✨ Preview Lyrics
                                 </button>
                             </div>
 
@@ -547,9 +713,10 @@ export default function MusicPage() {
                     </section>
                 </div>
 
+
                 {/* Preview section (collapsible) */}
                 {previewOpen && (
-                    <section className="mt-6">
+                    <section ref={previewRef} className="mt-6">
                         <div className="rounded-2xl bg-white/95 dark:bg-white/5 backdrop-blur p-6 shadow-md ring-1 ring-black/5 dark:ring-white/10">
                             <button
                                 className="w-full flex items-center justify-between text-left"
@@ -563,57 +730,6 @@ export default function MusicPage() {
                                 {previewOpen ? <FaChevronUp /> : <FaChevronDown />}
                             </button>
 
-                            {/* Player */}
-                            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                                {/* Left: cover & info */}
-                                <div className="flex items-center gap-3">
-                                    <div className="h-14 w-14 rounded-md bg-gradient-to-br from-primary to-secondary shadow-inner" />
-                                    <div>
-                                        <div className="font-medium text-slate-900 dark:text-[--color-accent]">{trackTitle || "Untitled Focus Track"}</div>
-                                        <div className="text-xs text-slate-600 dark:text-slate-300">AI Generated</div>
-                                    </div>
-                                </div>
-
-                                {/* Center: controls */}
-                                <div className="flex flex-col items-center">
-                                    <div className="flex items-center gap-3">
-                                        <button className="rounded-lg ring-1 ring-black/10 px-3 py-2 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" title="Replay" onClick={() => { setProgress(0); progressRef.current = 0; setIsPlaying(true); }}>
-                                            <FaStepBackward />
-                                        </button>
-                                        <button
-                                            className="rounded-lg px-6 py-2 bg-primary text-slate-900 font-medium shadow"
-                                            onClick={() => setIsPlaying((p) => !p)}
-                                            title={isPlaying ? "Pause" : "Play"}
-                                        >
-                                            {isPlaying ? <FaPause /> : <FaPlay />}
-                                        </button>
-                                        <button className="rounded-lg ring-1 ring-black/10 px-3 py-2 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" title="Skip" onClick={() => { setProgress(0); progressRef.current = 0; setIsPlaying(true); }}>
-                                            <FaStepForward />
-                                        </button>
-                                    </div>
-
-                                    {/* Progress */}
-                                    <div className="mt-3 w-full max-w-md">
-                                        <div className="h-2 w-full rounded-full bg-slate-200/70 overflow-hidden">
-                                            <div
-                                                className="h-full bg-gradient-to-r from-primary via-secondary to-primary transition-all"
-                                                style={{ width: `${progress}%` }}
-                                            />
-                                        </div>
-                                        <div className="mt-1 text-xs text-center text-slate-600 dark:text-slate-300">{Math.round(progress)}% — Duration: 3:24</div>
-                                    </div>
-                                </div>
-
-                                {/* Right: actions */}
-                                <div className="flex flex-wrap justify-end gap-2">
-                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={() => startGeneration(false)} title="Regenerate with same settings">🔁 Regenerate</button>
-                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={() => pushToast("Open tweak panel")} title="Adjust settings">✏️ Tweak Settings</button>
-                                    <button className="rounded-lg px-3 py-2 bg-primary text-slate-900 font-medium" onClick={() => pushToast("Downloading track…")} title="Download">💾 Download</button>
-                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={() => pushToast("Playing in background")} title="Background play">🔊 Play in Background</button>
-                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={() => pushToast("Added to Study Playlist")} title="Playlist">🎶 Add to Study Playlist</button>
-                                </div>
-                            </div>
-
                             {/* Lyrics/Notes Tabs */}
                             <div className="mt-6">
                                 <div className="flex items-center gap-6 text-sm">
@@ -624,11 +740,17 @@ export default function MusicPage() {
                                     {previewTab === 'lyrics' ? (
                                         <pre className="whitespace-pre-wrap font-sans">{lyricsText}</pre>
                                     ) : (
-                                        <ul className="list-disc pl-5 space-y-1">
-                                            {notesCovered.map((n, i) => (
-                                                <li key={i}>{n}</li>
-                                            ))}
-                                        </ul>
+                                        topicsLoading ? (
+                                            <div className="text-sm opacity-80">Detecting topics from your notes…</div>
+                                        ) : (
+                                            <ul className="list-disc pl-5 space-y-1">
+                                                {topicsCovered.length > 0 ? topicsCovered.map((n, i) => (
+                                                    <li key={i}>{n}</li>
+                                                )) : (
+                                                    <li>No topics detected yet.</li>
+                                                )}
+                                            </ul>
+                                        )
                                     )}
                                 </div>
 
@@ -642,7 +764,7 @@ export default function MusicPage() {
                                         <span className="text-sm">Adjust Tempo</span>
                                         <input type="range" min={50} max={120} value={tempo} onChange={(e)=>setTempo(Number(e.target.value))} />
                                     </div>
-                                    <button className="rounded-lg px-3 py-2 bg-secondary text-slate-900 font-medium" onClick={() => pushToast('Saved to Study Mix Playlist')}>Save to Playlist</button>
+                                    <button className="rounded-lg px-3 py-2 bg-secondary text-slate-900 font-medium" onClick={() => setPlaylistOpen(true)} disabled={!currentTrackId}>Save to Playlist</button>
                                 </div>
                             </div>
 
@@ -653,43 +775,47 @@ export default function MusicPage() {
                 )}
             </div>
 
-            {/* Suggested Playlists */}
+            {/* Recent Songs */}
             <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 mt-8">
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent] mb-3">Your Study Mix 🎧</h2>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent] mb-3">Recently Generated Songs</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {[
-                        { title: 'Physics Flow (Lo-Fi)', vibe: 'Calm • Lo‑Fi', color: 'from-primary to-secondary' },
-                        { title: 'Math Pop Hits', vibe: 'Upbeat • Pop', color: 'from-secondary to-primary' },
-                        { title: 'History Raps', vibe: 'Motivational • Hip‑Hop', color: 'from-primary to-secondary' },
-                    ].map((p, i) => (
-                        <div key={i} className="rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur p-4 shadow-md ring-1 ring-black/5 dark:ring-white/10">
+                    {(recentTracks.slice(0,3)).map((t, i) => (
+                        <div key={t.id} className="rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur p-4 shadow-md ring-1 ring-black/5 dark:ring-white/10">
                             <div className="flex items-center gap-3">
-                                <div className={`h-12 w-12 rounded-md bg-gradient-to-br ${p.color}`} />
-                                <div className="flex-1">
-                                    <div className="font-medium text-slate-900 dark:text-[--color-accent]">{p.title}</div>
-                                    <div className="text-xs text-slate-600 dark:text-slate-300">{p.vibe}</div>
+                                <div className={`h-12 w-12 rounded-md bg-gradient-to-br ${i % 2 === 0 ? 'from-primary to-secondary' : 'from-secondary to-primary'}`} />
+                                <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-slate-900 dark:text-[--color-accent] truncate">{t.title}</div>
+                                    <div className="text-xs text-slate-600 dark:text-slate-300">{new Date(t.playedAt).toLocaleString()}</div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <button className="rounded-md px-2 py-1 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" title="Play/Pause">{isPlaying ? '⏸' : '▶️'}</button>
-                                    <button className="rounded-md px-2 py-1 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" title="Shuffle">🔀</button>
-                                </div>
+                                {t.href ? (
+                                    <a href={t.href} className="rounded-md px-2 py-1 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10 text-xs">Open</a>
+                                ) : null}
                             </div>
                         </div>
                     ))}
+                    {recentTracks.length === 0 && (
+                        <div className="rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur p-6 text-sm text-slate-700 dark:text-slate-300 ring-1 ring-black/5 dark:ring-white/10">No recent songs yet. Generate your first track above!</div>
+                    )}
                 </div>
             </section>
 
-            {/* Bottom quick controls */}
-            <div className="fixed bottom-4 inset-x-4 z-40 mx-auto max-w-7xl">
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl backdrop-blur-md bg-white/70 dark:bg-white/10 border border-black/10 dark:border-white/10 shadow-md px-4 py-3">
-                    <button className="rounded-lg px-3 py-2 bg-secondary text-slate-900 font-medium" onClick={() => { const g = GENRES[Math.floor(Math.random()*GENRES.length)]; const m = MOODS[Math.floor(Math.random()*MOODS.length)]; setGenre(g as any); setMood(m as any); pushToast(`Try ${g} • ${m}`); }}>Need Inspiration?</button>
-                    <div className="flex items-center gap-2">
-                        <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={() => pushToast('Playing study music…')}>🎧 Play Study Music</button>
-                        <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={() => pushToast('Reading notes aloud…')}>🗣️ AI Read My Notes Aloud</button>
-                        <a href="/study" className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10">🧩 Back to Study Mode</a>
-                    </div>
-                </div>
-            </div>
+            {/* Fixed Music Player shows only after song is generated */}
+            {audioUrl && (
+              <>
+                <MusicPlayer
+                  trackTitle={trackTitle || 'Untitled Focus Track'}
+                  playbackState={playbackState}
+                  isGenerating={false}
+                  audioUrl={audioUrl}
+                  onPlayPause={handlePlayPause}
+                  onStop={handleStop}
+                  onTweakSettings={handleTweak}
+                  onRegenerate={handleRegenerate}
+                  onDownload={handleDownload}
+                />
+                <PlaylistModal open={playlistOpen} onClose={() => setPlaylistOpen(false)} trackId={currentTrackId} />
+              </>
+            )}
 
             {/* Toasts */}
             <div className="pointer-events-none fixed bottom-6 right-6 z-50 flex flex-col gap-2">

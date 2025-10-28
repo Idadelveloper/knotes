@@ -771,7 +771,7 @@ export default function StudyWorkspace() {
                     <button
                       role="menuitem"
                       className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-100"
-                      onClick={() => { setMusicMenuOpen(false); router.push('/music'); }}
+                      onClick={() => { setMusicMenuOpen(false); try { const sid = sessionStorage.getItem('knotes_current_session_id'); router.push(sid ? `/music/${sid}` : '/library?intent=music'); } catch { router.push('/library?intent=music'); } }}
                     >
                       Song with lyrics
                     </button>
@@ -819,7 +819,7 @@ export default function StudyWorkspace() {
                   <button role="menuitem" className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-100" onClick={() => { setMusicMenuOpen(false); setMusicSettingsSignal(s => s + 1); }}>
                     Background music
                   </button>
-                  <button role="menuitem" className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-100" onClick={() => { setMusicMenuOpen(false); router.push('/music'); }}>
+                  <button role="menuitem" className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-100" onClick={() => { setMusicMenuOpen(false); try { const sid = sessionStorage.getItem('knotes_current_session_id'); router.push(sid ? `/music/${sid}` : '/library?intent=music'); } catch { router.push('/library?intent=music'); } }}>
                     Song with lyrics
                   </button>
                 </div>
