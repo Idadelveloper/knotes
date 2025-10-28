@@ -15,7 +15,7 @@ import { promptWithNotes } from "@/lib/prompt";
 import MarkdownViewer from "@/components/MarkdownViewer";
 import MDEditor from "@uiw/react-md-editor";
 import { addRecentSession, addStudyMinutes } from "@/lib/stats";
-import { updateEditableText } from "@/lib/storage/sessions";
+import { updateEditableText, getSession } from "@/lib/storage/sessions";
 
 // Simple toast system
 type Toast = { id: number; message: string };
@@ -869,22 +869,53 @@ export default function StudyWorkspace() {
                   {/* Controls: Edit/Save/Cancel */}
                   <div className="mb-2 flex items-center gap-2 justify-end">
                     {!isEditingNotes ? (
-                      <button
-                        className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-black/10 px-3 py-1.5 text-slate-800 hover:bg-white/80"
-                        onClick={() => {
-                          setIsEditingNotes(true);
-                          // prepare editor buffers after next paint
-                          setTimeout(() => {
-                            if (notesMarkdown) {
-                              setMdEditing(notesMarkdown);
-                            } else if (editorRef.current) {
-                              editorRef.current.innerHTML = notesContentHtml || '';
-                            }
-                          }, 0);
-                        }}
-                      >
-                        Edit
-                      </button>
+                      <>
+                        <button
+                          className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-black/10 px-3 py-1.5 text-slate-800 hover:bg-white/80"
+                          onClick={() => {
+                            setIsEditingNotes(true);
+                            // prepare editor buffers after next paint
+                            setTimeout(() => {
+                              if (notesMarkdown) {
+                                setMdEditing(notesMarkdown);
+                              } else if (editorRef.current) {
+                                editorRef.current.innerHTML = notesContentHtml || '';
+                              }
+                            }, 0);
+                          }}
+                        >
+                          Edit
+                        </button>
+                        {notesMarkdown && (
+                          <button
+                            className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-black/10 px-3 py-1.5 text-slate-800 hover:bg-white/80"
+                            onClick={() => {
+                              try {
+                                const sid = sessionStorage.getItem('knotes_current_session_id');
+                                if (!sid) return;
+                                const sess = getSession(sid);
+                                const md = (sess?.structuredText || sess?.originalText || notesMarkdown) as string;
+                                setNotesMarkdown(md);
+                                const html = mdToHtml(md);
+                                setNotesContentHtml(html);
+                                const tmp = document.createElement('div');
+                                tmp.innerHTML = html;
+                                setEditorText((tmp.innerText || tmp.textContent || '').trim());
+                                updateEditableText(sid, md);
+                                try { sessionStorage.setItem('knotes_structured_text', md); } catch {}
+                                // Persist restored version for refreshes
+                                try {
+                                  localStorage.setItem('knotes_persist_markdown', md);
+                                  localStorage.setItem('knotes_persist_html', html);
+                                } catch {}
+                                pushToast('🔁 Restored original');
+                              } catch {}
+                            }}
+                          >
+                            Reset to Original
+                          </button>
+                        )}
+                      </>
                     ) : (
                       <>
                         <button
@@ -900,7 +931,15 @@ export default function StudyWorkspace() {
                               setEditorText((tmp.innerText || tmp.textContent || '').trim());
                               try {
                                 const sid = sessionStorage.getItem('knotes_current_session_id');
-                                if (sid) updateEditableText(sid, md);
+                                if (sid) {
+                                  updateEditableText(sid, md);
+                                }
+                                try { sessionStorage.setItem('knotes_structured_text', md); } catch {}
+                                // Persist across reloads
+                                try {
+                                  localStorage.setItem('knotes_persist_markdown', md);
+                                  localStorage.setItem('knotes_persist_html', html);
+                                } catch {}
                               } catch {}
                               setIsEditingNotes(false);
                               pushToast('💾 Notes saved');
@@ -911,6 +950,8 @@ export default function StudyWorkspace() {
                             const plain = el ? (el.innerText || el.textContent || '').trim() : editorText;
                             setNotesContentHtml(html || '');
                             setEditorText(plain);
+                            // Persist HTML-based edits for non-Markdown sessions
+                            try { if (html) localStorage.setItem('knotes_persist_html', html); } catch {}
                             setIsEditingNotes(false);
                             pushToast('💾 Notes saved');
                           }}
