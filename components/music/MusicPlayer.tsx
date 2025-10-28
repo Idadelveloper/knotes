@@ -229,7 +229,7 @@ const MusicPlayer = ({
     updateProgress();
   };
 
-  const statusText = isGenerating ? 'Composing...' : trackTitle || 'Ready';
+  const statusText = (trackTitle && trackTitle.trim()) ? trackTitle : (isGenerating ? 'Composing...' : 'Ready');
 
   if (isMinimized) {
     return (
