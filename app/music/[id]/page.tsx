@@ -221,7 +221,7 @@ export default function MusicPage() {
                 energy,
                 instruments: instrumentList,
                 singer,
-                forceInstrumental: !lyrics,
+                forceInstrumental: false,
                 lyricStyle: lyricsMode,
                 durationSec: lengthSec,
                 manualTopics: manualTopics,
@@ -230,7 +230,7 @@ export default function MusicPage() {
             // 4) Compose via ElevenLabs
             const lengthMs = Math.max(3000, Math.min(300000, Math.round(lengthSec * 1000)));
             try {
-                const res = await composeSongDetailed({ prompt, musicLengthMs: lengthMs, forceInstrumental: !lyrics });
+                const res = await composeSongDetailed({ prompt, musicLengthMs: lengthMs, forceInstrumental: false });
                 setGenStep(3);
                 setAudioUrl(res.blobUrl);
                 setPreviewOpen(true);
@@ -258,7 +258,7 @@ export default function MusicPage() {
                 // Retry once with suggestion if bad_prompt
                 if (err && err.code === 'bad_prompt' && err.suggestion) {
                     try {
-                        const res2 = await composeSongDetailed({ prompt: err.suggestion, musicLengthMs: lengthMs, forceInstrumental: !lyrics });
+                        const res2 = await composeSongDetailed({ prompt: err.suggestion, musicLengthMs: lengthMs, forceInstrumental: false });
                         setAudioUrl(res2.blobUrl);
                         setPreviewOpen(true);
                         setIsGenerating(false);

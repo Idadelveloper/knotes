@@ -57,7 +57,7 @@ async function createWriter(opts?: WriterOptions, hooks?: { onDownloadStart?: ()
     tone: opts?.tone ?? 'neutral',
     format: opts?.format ?? 'plain-text',
     length: opts?.length ?? 'short',
-    sharedContext: opts?.sharedContext ?? 'Generate a short, creative title for a piece of instrumental background music used for studying. No quotes, 2–6 words.',
+    sharedContext: opts?.sharedContext ?? 'Generate a short, creative title for a study song with vocals. No quotes, 2–6 words.',
     expectedInputLanguages: opts?.expectedInputLanguages ?? ['en'],
     expectedContextLanguages: opts?.expectedContextLanguages ?? ['en'],
     outputLanguage: opts?.outputLanguage ?? 'en',
