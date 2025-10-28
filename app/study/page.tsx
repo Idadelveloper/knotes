@@ -15,6 +15,7 @@ import { promptWithNotes } from "@/lib/prompt";
 import MarkdownViewer from "@/components/MarkdownViewer";
 import MDEditor from "@uiw/react-md-editor";
 import { addRecentSession, addStudyMinutes } from "@/lib/stats";
+import { updateEditableText } from "@/lib/storage/sessions";
 
 // Simple toast system
 type Toast = { id: number; message: string };
@@ -287,11 +288,13 @@ export default function StudyWorkspace() {
     sessionStorage.removeItem(titleKey);
   }, []);
 
-  // Record recent session when title becomes available
+  // Record recent session when title becomes available (prefer dynamic session id if present)
   useEffect(() => {
     if (!notesTitle || !notesTitle.trim()) return;
     try {
-      addRecentSession({ id: `${Date.now()}:${notesTitle}`, title: notesTitle.trim(), openedAt: new Date().toISOString(), href: "/study" });
+      const sid = typeof window !== 'undefined' ? sessionStorage.getItem('knotes_current_session_id') : null;
+      const href = sid ? `/study/${sid}` : '/study';
+      addRecentSession({ id: sid || `${Date.now()}:${notesTitle}`, title: notesTitle.trim(), openedAt: new Date().toISOString(), href });
     } catch {}
   }, [notesTitle]);
 
@@ -895,6 +898,10 @@ export default function StudyWorkspace() {
                               const tmp = document.createElement('div');
                               tmp.innerHTML = html;
                               setEditorText((tmp.innerText || tmp.textContent || '').trim());
+                              try {
+                                const sid = sessionStorage.getItem('knotes_current_session_id');
+                                if (sid) updateEditableText(sid, md);
+                              } catch {}
                               setIsEditingNotes(false);
                               pushToast('💾 Notes saved');
                               return;

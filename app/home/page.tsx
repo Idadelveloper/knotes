@@ -7,7 +7,8 @@ import { HiOutlineX } from "react-icons/hi";
 import { extractTextFromFile } from "@/lib/ai";
 import { rewriteText, generateTitle } from "@/lib/rewriter";
 import { useAuth } from "@/components/AuthProvider";
-import { getStats, getRecentSessions, getRecentTracks, incStat, type DashboardStats, type RecentSession, type RecentTrack } from "@/lib/stats";
+import { getStats, getRecentSessions, getRecentTracks, incStat, addRecentSession, type DashboardStats, type RecentSession, type RecentTrack } from "@/lib/stats";
+import { createSession } from "@/lib/storage/sessions";
 
 export default function HomePage() {
   // Auth + Dashboard state
@@ -40,13 +41,13 @@ export default function HomePage() {
           // Post-process with Chrome Rewriter (or Gemini fallback) to structure notes
           const { text: structured, used } = await rewriteText(text.trim());
           const { title } = await generateTitle(text.trim());
-          sessionStorage.setItem("knotes_extracted_text", text.trim());
-          sessionStorage.setItem("knotes_structured_text", (structured || text).trim());
-          sessionStorage.setItem("knotes_title", title || "Study Notes");
-          console.log(`[Home] Structured notes via ${used}. Redirecting to /study.`);
+          const sess = createSession(title || "Study Notes", text.trim(), (structured || text).trim());
+          addRecentSession({ id: sess.id, title: sess.title, openedAt: new Date().toISOString(), href: `/study/${sess.id}` });
+          try { sessionStorage.setItem("knotes_current_session_id", sess.id); } catch {}
+          console.log(`[Home] Structured notes via ${used}. Redirecting to /study/${sess.id}.`);
           try { incStat('uploads', 1); setStatsState(getStats()); } catch {}
           setIsModalOpen(false);
-          window.location.href = "/study";
+          window.location.href = `/study/${sess.id}`;
         } else {
           throw new Error("No text could be extracted from the document.");
         }
@@ -288,13 +289,14 @@ export default function HomePage() {
                           if (text && text.trim().length > 0) {
                             const { text: structured, used } = await rewriteText(text.trim());
                             const { title } = await generateTitle(text.trim());
-                            sessionStorage.setItem("knotes_extracted_text", text.trim());
-                            sessionStorage.setItem("knotes_structured_text", (structured || text).trim());
-                            sessionStorage.setItem("knotes_title", title || "Study Notes");
-                            console.log(`[Home] Structured notes via ${used}. Redirecting to /study.`);
+                            // Create persistent session with original+structured notes
+                            const sess = createSession(title || "Study Notes", text.trim(), (structured || text).trim());
+                            // Update recents with direct link
+                            addRecentSession({ id: sess.id, title: sess.title, openedAt: new Date().toISOString(), href: `/study/${sess.id}` });
+                            try { sessionStorage.setItem("knotes_current_session_id", sess.id); } catch {}
                             try { incStat('uploads', 1); setStatsState(getStats()); } catch {}
                             setIsModalOpen(false);
-                            window.location.href = "/study";
+                            window.location.href = `/study/${sess.id}`;
                           } else {
                             throw new Error("No text could be extracted from the document.");
                           }
@@ -344,12 +346,12 @@ export default function HomePage() {
                     setUploading(true);
                     const { text: structured, used } = await rewriteText(text);
                     const { title } = await generateTitle(text);
-                    sessionStorage.setItem("knotes_extracted_text", text);
-                    sessionStorage.setItem("knotes_structured_text", (structured || text).trim());
-                    sessionStorage.setItem("knotes_title", title || "Study Notes");
-                    console.log(`[Home] Structured pasted notes via ${used}. Redirecting to /study.`);
+                    const sess = createSession(title || "Study Notes", text, (structured || text).trim());
+                    addRecentSession({ id: sess.id, title: sess.title, openedAt: new Date().toISOString(), href: `/study/${sess.id}` });
+                    try { sessionStorage.setItem("knotes_current_session_id", sess.id); } catch {}
+                    console.log(`[Home] Structured pasted notes via ${used}. Redirecting to /study/${sess.id}.`);
                     setIsModalOpen(false);
-                    window.location.href = "/study";
+                    window.location.href = `/study/${sess.id}`;
                   } catch (err: any) {
                     console.error(err);
                     setUploadError(err?.message || "Failed to process notes.");
