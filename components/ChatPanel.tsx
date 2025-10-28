@@ -51,16 +51,16 @@ export default function ChatPanel({
   if (!open) return null;
 
   return (
-    <div className="fixed top-16 bottom-6 right-4 z-50 w-[92vw] max-w-lg rounded-2xl bg-white/95 dark:bg-[--color-dark-bg]/95 ring-1 ring-black/10 dark:ring-white/10 shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed top-16 bottom-6 right-4 z-50 w-[92vw] max-w-lg rounded-2xl bg-white/95  ring-1 ring-black/10  shadow-2xl overflow-hidden flex flex-col">
       {/* Header using Chatscope ConversationHeader for consistency */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-black/10 dark:border-white/10">
-        <div className="flex items-center gap-2 text-slate-900 dark:text-[--color-accent]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-black/10 ">
+        <div className="flex items-center gap-2 text-slate-900">
           <span className="font-semibold">{title}</span>
         </div>
         <div className="flex items-center gap-2">
           <button
             aria-label="Close chat"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md ring-1 ring-black/10 dark:ring-white/10 bg-white/70 dark:bg-white/10 hover:bg-white/90"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md ring-1 ring-black/10  bg-white/70 hover:bg-white/90"
             onClick={onClose}
           >
             <HiOutlineX size={16} />
@@ -97,13 +97,13 @@ export default function ChatPanel({
                 );
               })}
             </MessageList>
-            <div as={MessageInput} className="flex items-center gap-2 px-2 py-2 border-t border-black/10 dark:border-white/10 bg-white/90 dark:bg-[--color-dark-bg]/90 shrink-0">
+            <div as={MessageInput} className="flex items-center gap-2 px-2 py-2 border-t border-black/10  bg-white/90  shrink-0">
               {/* Record and Speaker controls moved next to input */}
               <button
                 type="button"
                 aria-label={recording ? "Stop recording" : "Start recording"}
                 title={recording ? "Stop recording" : "Hold to speak or click to toggle recording"}
-                className={`inline-flex items-center justify-center h-10 w-10 rounded-md ring-1 ring-black/10 dark:ring-white/10 transition-colors ${recording ? 'bg-red-600 text-white' : 'bg-white/70 dark:bg-white/10 text-slate-800 dark:text-[--color-accent]'}`}
+                className={`inline-flex items-center justify-center h-10 w-10 rounded-md ring-1 ring-black/10  transition-colors ${recording ? 'bg-red-600 text-white' : 'bg-white/70 text-slate-800 '}`}
                 onMouseDown={onMicStart}
                 onMouseUp={onMicStop}
                 onTouchStart={onMicStart}
@@ -116,7 +116,7 @@ export default function ChatPanel({
                 type="button"
                 aria-label={speakEnabled ? "Disable voice reply" : "Enable voice reply"}
                 title="Toggle voice reply"
-                className={`inline-flex items-center justify-center h-10 w-10 rounded-md ring-1 ring-black/10 dark:ring-white/10 transition-colors ${speakEnabled ? 'bg-primary text-slate-900' : 'bg-white/70 dark:bg-white/10 text-slate-800 dark:text-[--color-accent]'}`}
+                className={`inline-flex items-center justify-center h-10 w-10 rounded-md ring-1 ring-black/10  transition-colors ${speakEnabled ? 'bg-primary text-slate-900' : 'bg-white/70  text-slate-800 '}`}
                 onClick={onToggleSpeak}
               >
                 <FaVolumeUp />

@@ -717,7 +717,7 @@ export default function StudyWorkspace() {
       <div className={`mx-auto w-full max-w-7xl px-4 sm:px-6 pt-16 ${rightPadClass} transition-[padding] duration-300`}>
         <div className="mb-6 flex items-center justify-between">
           {/* Left: Timer control */}
-          <div className="flex items-center gap-2 text-slate-900 dark:text-[--color-accent]">
+          <div className="flex items-center gap-2 text-slate-900 ">
             {isTimerRunning && showCountdown ? (
               <button
                 onClick={() => setTimerOpen(true)}
@@ -790,11 +790,11 @@ export default function StudyWorkspace() {
 
           {/* Right: Focus Mode toggle */}
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-700 dark:text-slate-300">Focus Mode</span>
+            <span className="text-sm text-slate-700 ">Focus Mode</span>
             <button
               aria-pressed={focusMode}
               onClick={() => setFocusMode(v => !v)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${focusMode ? 'bg-blue-500' : 'bg-slate-300'} ring-1 ring-black/10 dark:ring-white/10`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${focusMode ? 'bg-blue-500' : 'bg-slate-300'} ring-1 ring-black/10 `}
               title="Hide menus and darken UI"
             >
               <span
@@ -1334,28 +1334,28 @@ export default function StudyWorkspace() {
           aria-modal="true"
           onClick={(e) => { if (e.target === e.currentTarget) setTimerOpen(false); }}
         >
-          <div className="absolute inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm" />
-          <div className="relative z-10 w-full max-w-md rounded-2xl bg-accent/95 dark:bg-[--color-dark-bg]/95 ring-1 ring-black/10 dark:ring-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.25)]">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-black/10 dark:border-white/10">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent]">Timer</h3>
+          <div className="absolute inset-0 bg-black/30  backdrop-blur-sm" />
+          <div className="relative z-10 w-full max-w-md rounded-2xl bg-accent/95  ring-1 ring-black/10  shadow-[0_20px_50px_rgba(0,0,0,0.25)]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-black/10 ">
+              <h3 className="text-lg font-semibold text-slate-900 ">Timer</h3>
               <button
                 aria-label="Close"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-black/10 dark:ring-white/10 bg-white/70 dark:bg-white/5 text-slate-700 dark:text-[--color-accent] hover:bg-white/80"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-black/10  bg-white/70 text-slate-700  hover:bg-white/80"
                 onClick={() => setTimerOpen(false)}
               >
                 <HiOutlineX size={18} />
               </button>
             </div>
-            <div className="px-5 py-4 space-y-4 text-slate-800 dark:text-slate-200">
+            <div className="px-5 py-4 space-y-4 text-slate-800 ">
               <div className="flex gap-2">
                 <button
-                  className={`flex-1 rounded-lg px-3 py-2 ring-1 ${timerMode === 'pomodoro' ? 'bg-primary text-slate-900 ring-primary/50' : 'bg-white/70 dark:bg-white/5 ring-black/10 dark:ring-white/10'}`}
+                  className={`flex-1 rounded-lg px-3 py-2 ring-1 ${timerMode === 'pomodoro' ? 'bg-primary text-slate-900 ring-primary/50' : 'bg-white/70  ring-black/10 '}`}
                   onClick={() => setTimerMode('pomodoro')}
                 >
                   Pomodoro (25 min)
                 </button>
                 <button
-                  className={`flex-1 rounded-lg px-3 py-2 ring-1 ${timerMode === 'custom' ? 'bg-primary text-slate-900 ring-primary/50' : 'bg-white/70 dark:bg-white/5 ring-black/10 dark:ring-white/10'}`}
+                  className={`flex-1 rounded-lg px-3 py-2 ring-1 ${timerMode === 'custom' ? 'bg-primary text-slate-900 ring-primary/50' : 'bg-white/70  ring-black/10 '}`}
                   onClick={() => setTimerMode('custom')}
                 >
                   Custom
@@ -1364,7 +1364,7 @@ export default function StudyWorkspace() {
 
               {timerMode === 'custom' && (
                 <div className="flex items-center gap-3">
-                  <label htmlFor="minutes" className="text-sm text-slate-600 dark:text-slate-300">Minutes</label>
+                  <label htmlFor="minutes" className="text-sm text-slate-600 ">Minutes</label>
                   <input
                     id="minutes"
                     type="number"
@@ -1372,12 +1372,12 @@ export default function StudyWorkspace() {
                     max={180}
                     value={customMinutes}
                     onChange={(e) => setCustomMinutes(Math.max(1, Math.min(180, Number(e.target.value) || 0)))}
-                    className="w-24 rounded-lg bg-white/80 dark:bg-white/5 ring-1 ring-black/10 dark:ring-white/10 p-2 text-slate-900 dark:text-[--color-accent]"
+                    className="w-24 rounded-lg bg-white/80  ring-1 ring-black/10  p-2 text-slate-900 "
                   />
                 </div>
               )}
 
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+              <label className="inline-flex items-center gap-2 text-sm text-slate-700 ">
                 <input
                   type="checkbox"
                   checked={showCountdown}
@@ -1387,7 +1387,7 @@ export default function StudyWorkspace() {
               </label>
 
               <div className="flex items-center justify-between pt-2">
-                <div className="text-sm text-slate-600 dark:text-slate-300">
+                <div className="text-sm text-slate-600 ">
                   {isTimerRunning ? (
                     <>Remaining: <span className="font-semibold text-red-600">{formatTime(remainingSecs)}</span></>
                   ) : (
@@ -1398,7 +1398,7 @@ export default function StudyWorkspace() {
                   {isTimerRunning ? (
                     <>
                       <button
-                        className="rounded-lg px-4 py-2 ring-1 ring-black/10 dark:ring-white/10 bg-white/70 dark:bg-white/5 hover:bg-white/90"
+                        className="rounded-lg px-4 py-2 ring-1 ring-black/10  bg-white/70  hover:bg-white/90"
                         onClick={() => { setIsTimerRunning(false); setRemainingSecs(0); }}
                       >
                         Stop
@@ -1432,7 +1432,7 @@ export default function StudyWorkspace() {
       {/* Time Up Modal */}
       {timeUpOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="alertdialog" aria-modal="true">
-          <div className="absolute inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm" onClick={() => setTimeUpOpen(false)} />
+          <div className="absolute inset-0 bg-black/30  backdrop-blur-sm" onClick={() => setTimeUpOpen(false)} />
           <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white ring-1 ring-black/10 shadow-xl p-6 text-center">
             <h4 className="text-xl font-semibold text-slate-900 mb-2">Time's up!</h4>
             <p className="text-slate-700 mb-4">Great job. Take a short break and resume when ready.</p>
@@ -1449,11 +1449,11 @@ export default function StudyWorkspace() {
           aria-modal="true"
           onClick={(e) => { if (e.target === e.currentTarget) setAiOpen(false); }}
         >
-          <div className="absolute inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm" />
-          <div className="relative z-10 w-full max-w-2xl rounded-3xl bg-accent/95 dark:bg-[--color-dark-bg]/95 ring-1 ring-black/10 dark:ring-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.25)]">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-black/10 dark:border-white/10 gap-3">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent]">AI Assistant</h3>
-              <div className="inline-flex rounded-full bg-white/50 dark:bg-white/10 p-1">
+          <div className="absolute inset-0 bg-black/30  backdrop-blur-sm" />
+          <div className="relative z-10 w-full max-w-2xl rounded-3xl bg-accent/95  ring-1 ring-black/10  shadow-[0_20px_50px_rgba(0,0,0,0.25)]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-black/10  gap-3">
+              <h3 className="text-lg font-semibold text-slate-900 ">AI Assistant</h3>
+              <div className="inline-flex rounded-full bg-white/50  p-1">
                 <TabBtn active={aiTab === "explain"} onClick={() => setAiTab("explain")}>
                   Explain
                 </TabBtn>
@@ -1469,13 +1469,13 @@ export default function StudyWorkspace() {
               </div>
               <button
                 aria-label="Close"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-black/10 dark:ring-white/10 bg-white/70 dark:bg-white/5 text-slate-700 dark:text-[--color-accent] hover:bg-white/80"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-black/10  bg-white/70  text-slate-700 hover:bg-white/80"
                 onClick={() => setAiOpen(false)}
               >
                 <HiOutlineX size={18} />
               </button>
             </div>
-            <div className="px-6 py-5 max-h-[45vh] overflow-auto text-slate-900 dark:text-slate-100">
+            <div className="px-6 py-5 max-h-[45vh] overflow-auto text-slate-900 ">
               <p className="whitespace-pre-wrap leading-7">{aiOutput || "AI is ready. Choose a tab or run an action from the toolbar."}</p>
             </div>
             <div className="px-6 pb-6">
@@ -1509,7 +1509,7 @@ export default function StudyWorkspace() {
 function ToolBtn({ children, title, onClick }: { children: React.ReactNode; title: string; onClick: () => void }) {
   return (
     <button
-      className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-[--color-accent] hover:bg-black/5 dark:hover:bg-white/10"
+      className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-800  hover:bg-black/5 "
       title={title}
       onClick={onClick}
     >
@@ -1526,9 +1526,9 @@ function Panel({ title, open, onToggle, onCopy, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-3 rounded-2xl ring-1 ring-black/5 dark:ring-white/10 bg-white/80 dark:bg-white/5">
+    <div className="mb-3 rounded-2xl ring-1 ring-black/5 bg-white/80 ">
       <div className="flex items-center justify-between px-4 py-3">
-        <button className="inline-flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-[--color-accent]" onClick={onToggle}>
+        <button className="inline-flex items-center gap-2 text-sm font-medium text-slate-800 " onClick={onToggle}>
           {open ? <FaChevronDown /> : <FaChevronRight />} {title}
         </button>
         <button className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs text-primary ring-1 ring-primary/40 hover:bg-primary/10" onClick={onCopy}>
@@ -1548,7 +1548,7 @@ function Panel({ title, open, onToggle, onCopy, children }: {
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
-      className={`px-3 py-1 rounded-full text-sm ${active ? "bg-primary text-slate-900" : "text-slate-700 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-white/10"}`}
+      className={`px-3 py-1 rounded-full text-sm ${active ? "bg-primary text-slate-900" : "text-slate-700  hover:bg-white/60 "}`}
       onClick={onClick}
     >
       {children}

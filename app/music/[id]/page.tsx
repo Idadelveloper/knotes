@@ -474,8 +474,8 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
             <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 pt-16">
                 {/* Page title */}
                 <header className="mb-6">
-                    <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-[--color-accent]">Music Generator</h1>
-                    <p className="text-sm text-slate-700 dark:text-slate-300">Turn your key topics into focus-friendly soundtracks.</p>
+                    <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 ">Music Generator</h1>
+                    <p className="text-sm text-slate-700 ">Turn your key topics into focus-friendly soundtracks.</p>
                 </header>
 
                 {/* Split view */}
@@ -483,18 +483,18 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                     {/* Left: Note Insights */}
                     <section className="lg:col-span-1 space-y-4">
                         {/* Song Scope card */}
-                        <div className="rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur p-6 shadow-md ring-1 ring-black/5 dark:ring-white/10 transition-transform hover:-translate-y-0.5">
-                            <h2 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent] mb-3">Song Scope</h2>
+                        <div className="rounded-2xl bg-white/90  backdrop-blur p-6 shadow-md ring-1 ring-black/5  transition-transform hover:-translate-y-0.5">
+                            <h2 className="text-lg font-semibold text-slate-900  mb-3">Song Scope</h2>
                             <div className="flex flex-col gap-2 text-sm">
-                                <div className="text-sm text-slate-700 dark:text-slate-300">Generating based on the entire lecture/upload.</div>
+                                <div className="text-sm text-slate-700 ">Generating based on the entire lecture/upload.</div>
                             </div>
                         </div>
 
                         {/* Topics card (only if scope is topics) */}
                         {scope === 'topics' && (
-                            <div className="rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur p-6 shadow-md ring-1 ring-black/5 dark:ring-white/10 transition-transform hover:-translate-y-0.5">
+                            <div className="rounded-2xl bg-white/90  backdrop-blur p-6 shadow-md ring-1 ring-black/5  transition-transform hover:-translate-y-0.5">
                                 <div className="flex items-center justify-between mb-3">
-                                    <h2 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent]">Detected Topics</h2>
+                                    <h2 className="text-lg font-semibold text-slate-900 ">Detected Topics</h2>
                                     <button
                                         className="text-sm rounded-full px-3 py-1 bg-primary text-slate-900 shadow hover:brightness-105"
                                         onClick={selectAll}
@@ -527,12 +527,12 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                 <div className="mt-4 flex items-center justify-between">
                                     <button
                                         onClick={analyzeAgain}
-                                        className="rounded-xl px-4 py-2 bg-white ring-1 ring-black/10 text-slate-800 hover:bg-white/90 dark:bg-white/10 dark:text-[--color-accent] dark:ring-white/10"
+                                        className="rounded-xl px-4 py-2 bg-white ring-1 ring-black/10 text-slate-800 hover:bg-white/90"
                                         title="Re-detect topics from notes"
                                     >
                                         Analyze Notes Again
                                     </button>
-                                    <span className="text-xs text-slate-500 dark:text-slate-400">{selectedTopics.size} selected</span>
+                                    <span className="text-xs text-slate-500 ">{selectedTopics.size} selected</span>
                                 </div>
                             </div>
                         )}
@@ -540,11 +540,11 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
 
                     {/* Right: Music Generator */}
                     <section className="lg:col-span-2">
-                        <div className="rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur p-6 shadow-md ring-1 ring-black/5 dark:ring-white/10">
+                        <div className="rounded-2xl bg-white/90 backdrop-blur p-6 shadow-md ring-1 ring-black/5 ">
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-xl font-semibold text-slate-900 dark:text-[--color-accent]">Generate Your Study Music</h2>
+                                <h2 className="text-xl font-semibold text-slate-900 ">Generate Your Study Music</h2>
                                 {isGenerating && (
-                                    <div className="text-sm text-slate-700 dark:text-slate-300">
+                                    <div className="text-sm text-slate-700 ">
                                         {steps[Math.min(genStep, steps.length - 1)]}…
                                     </div>
                                 )}
@@ -553,9 +553,9 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                             {/* Controls */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-xs text-slate-600 dark:text-slate-300">Genre</label>
+                                    <label className="text-xs text-slate-600 ">Genre</label>
                                     <select
-                                        className="mt-1 w-full rounded-lg bg-white/80 dark:bg-white/10 ring-1 ring-black/10 dark:ring-white/10 p-2 text-slate-900 dark:text-[--color-accent]"
+                                        className="mt-1 w-full rounded-lg bg-white/80  ring-1 ring-black/10 p-2 text-slate-900 "
                                         value={genre}
                                         onChange={(e) => genreChange(e.target.value as any)}
                                     >
@@ -565,9 +565,9 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-xs text-slate-600 dark:text-slate-300">Vibe / Mood</label>
+                                    <label className="text-xs text-slate-600 ">Vibe / Mood</label>
                                     <select
-                                        className="mt-1 w-full rounded-lg bg-white/80 dark:bg-white/10 ring-1 ring-black/10 dark:ring-white/10 p-2 text-slate-900 dark:text-[--color-accent]"
+                                        className="mt-1 w-full rounded-lg bg-white/80 ring-1 ring-black/10 d p-2 text-slate-900 "
                                         value={mood}
                                         onChange={(e) => moodChange(e.target.value as any)}
                                     >
@@ -577,7 +577,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-xs text-slate-600 dark:text-slate-300">Tempo: {Math.round(tempo)} BPM</label>
+                                    <label className="text-xs text-slate-600">Tempo: {Math.round(tempo)} BPM</label>
                                     <input
                                         type="range"
                                         min={50}
@@ -588,7 +588,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs text-slate-600 dark:text-slate-300">Energy Level</label>
+                                    <label className="text-xs text-slate-600 ">Energy Level</label>
                                     <div className="mt-1 flex gap-2">
                                         {(["Low", "Medium", "High"] as Energy[]).map((lv) => (
                                             <button
@@ -597,7 +597,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                                 className={`flex-1 rounded-lg px-3 py-2 ring-1 ${
                                                     energy === lv
                                                         ? "bg-primary text-slate-900 ring-primary/60"
-                                                        : "bg-white/80 dark:bg-white/10 text-slate-800 dark:text-[--color-accent] ring-black/10 dark:ring-white/10"
+                                                        : "bg-white/80  text-slate-800  ring-black/10 "
                                                 }`}
                                             >
                                                 {lv}
@@ -606,9 +606,9 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-xs text-slate-600 dark:text-slate-300">Singer Style</label>
+                                    <label className="text-xs text-slate-600 ">Singer Style</label>
                                     <select
-                                        className="mt-1 w-full rounded-lg bg-white/80 dark:bg-white/10 ring-1 ring-black/10 dark:ring-white/10 p-2 text-slate-900 dark:text-[--color-accent]"
+                                        className="mt-1 w-full rounded-lg bg-white/80  ring-1 ring-black/10  p-2 text-slate-900 "
                                         value={singer}
                                         onChange={(e) => setSinger(e.target.value as any)}
                                     >
@@ -618,7 +618,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-xs text-slate-600 dark:text-slate-300">Song Length: {Math.round(lengthSec/60)}:{String(Math.round(lengthSec%60)).padStart(2,'0')}</label>
+                                    <label className="text-xs text-slate-600 ">Song Length: {Math.round(lengthSec/60)}:{String(Math.round(lengthSec%60)).padStart(2,'0')}</label>
                                     <input
                                         type="range"
                                         min={30}
@@ -628,36 +628,36 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                         onChange={(e) => setLengthSec(Number(e.target.value))}
                                         className="mt-2 w-full"
                                     />
-                                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Shorter tracks are generated faster.</p>
+                                    <p className="mt-1 text-[11px] text-slate-500 ">Shorter tracks are generated faster.</p>
                                 </div>
                             </div>
 
                             {/* Lyrics Style */}
                             <div className="mt-4">
-                                <div className="text-xs text-slate-600 dark:text-slate-300 mb-1">Lyrics Style</div>
+                                <div className="text-xs text-slate-600 ">Lyrics Style</div>
                                 <div className="flex flex-wrap gap-2">
-                                    <button onClick={() => setLyricsMode('summary')} className={`rounded-full px-3 py-1.5 text-sm ring-1 ${lyricsMode==='summary' ? 'bg-secondary text-slate-900 ring-secondary/60' : 'bg-white/80 dark:bg-white/10 text-slate-800 dark:text-[--color-accent] ring-black/10 dark:ring-white/10'}`}>Summarize Notes into Catchy Lyrics</button>
-                                    <button onClick={() => setLyricsMode('educational')} className={`rounded-full px-3 py-1.5 text-sm ring-1 ${lyricsMode==='educational' ? 'bg-secondary text-slate-900 ring-secondary/60' : 'bg-white/80 dark:bg-white/10 text-slate-800 dark:text-[--color-accent] ring-black/10 dark:ring-white/10'}`}>Keep Educational Tone</button>
-                                    <button onClick={() => setLyricsMode('mix')} className={`rounded-full px-3 py-1.5 text-sm ring-1 ${lyricsMode==='mix' ? 'bg-secondary text-slate-900 ring-secondary/60' : 'bg-white/80 dark:bg-white/10 text-slate-800 dark:text-[--color-accent] ring-black/10 dark:ring-white/10'}`}>Mix Both</button>
+                                    <button onClick={() => setLyricsMode('summary')} className={`rounded-full px-3 py-1.5 text-sm ring-1 ${lyricsMode==='summary' ? 'bg-secondary text-slate-900 ring-secondary/60' : 'bg-white/80  text-slate-800  ring-black/10 '}`}>Summarize Notes into Catchy Lyrics</button>
+                                    <button onClick={() => setLyricsMode('educational')} className={`rounded-full px-3 py-1.5 text-sm ring-1 ${lyricsMode==='educational' ? 'bg-secondary text-slate-900 ring-secondary/60' : 'bg-white/80  text-slate-800  ring-black/10 '}`}>Keep Educational Tone</button>
+                                    <button onClick={() => setLyricsMode('mix')} className={`rounded-full px-3 py-1.5 text-sm ring-1 ${lyricsMode==='mix' ? 'bg-secondary text-slate-900 ring-secondary/60' : 'bg-white/80  text-slate-800  ring-black/10 '}`}>Mix Both</button>
                                 </div>
-                                <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">You can preview generated lyrics before full song generation.</p>
+                                <p className="mt-2 text-xs text-slate-600 ">You can preview generated lyrics before full song generation.</p>
                             </div>
 
                             {/* Manual Topics Input */}
                             <div className="mt-4">
-                                <label className="text-xs text-slate-600 dark:text-slate-300">Areas/Topics to cover (optional)</label>
+                                <label className="text-xs text-slate-600 ">Areas/Topics to cover (optional)</label>
                                 <textarea
                                   value={manualTopics}
                                   onChange={(e) => setManualTopics(e.target.value)}
                                   placeholder="e.g. Backpropagation, Gradient Descent vs Adam, Overfitting, Regularization"
-                                  className="mt-1 w-full rounded-lg bg-white/80 dark:bg-white/10 ring-1 ring-black/10 dark:ring-white/10 p-2 text-sm min-h-20"
+                                  className="mt-1 w-full rounded-lg bg-white/80 ring-1 ring-black/10  p-2 text-sm min-h-20"
                                 />
-                                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">These topics will be prioritized in the lyrics and music prompt.</p>
+                                <p className="mt-1 text-[11px] text-slate-500 ">These topics will be prioritized in the lyrics and music prompt.</p>
                             </div>
 
                             {/* Instruments */}
                             <div className="mt-4">
-                                <div className="text-xs text-slate-600 dark:text-slate-300 mb-2">Instrument Mix</div>
+                                <div className="text-xs text-slate-600  mb-2">Instrument Mix</div>
                                 <div className="flex flex-wrap gap-2">
                                     {INSTRUMENTS.map((name) => {
                                         const on = !!instrumentMix[name];
@@ -668,7 +668,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                                 className={`rounded-full px-3 py-1.5 text-sm ring-1 transition ${
                                                     on
                                                         ? "bg-secondary text-slate-900 ring-secondary/60"
-                                                        : "bg-white/80 dark:bg-white/10 text-slate-800 dark:text-[--color-accent] ring-black/10 dark:ring-white/10"
+                                                        : "bg-white/80  text-slate-800  ring-black/10 "
                                                 }`}
                                                 title={on ? "Enabled" : "Enable"}
                                             >
@@ -697,13 +697,13 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                     <div className="h-2 w-full rounded-full bg-slate-200/70 overflow-hidden">
                                         <div className="h-full bg-gradient-to-r from-primary via-secondary to-primary transition-all" style={{ width: `${(Math.min(genStep, steps.length) / steps.length) * 100}%` }} />
                                     </div>
-                                    <div className="flex items-center justify-between text-sm text-slate-700 dark:text-slate-300">
+                                    <div className="flex items-center justify-between text-sm text-slate-700 ">
                                         <span>{steps[Math.min(genStep, steps.length - 1)]}…</span>
                                         <span className="italic opacity-80">{funTips[tipIndex]}</span>
                                     </div>
                                     <div className="h-24 rounded-xl bg-gradient-to-r from-primary/20 via-secondary/20 to-primary/20 relative overflow-hidden">
                                         <div className="absolute inset-0 opacity-60" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.6) 2px, transparent 2px)', backgroundSize: '20px 20px' }} />
-                                        <div className="absolute inset-0 flex items-center justify-center text-slate-800 dark:text-[--color-accent]">
+                                        <div className="absolute inset-0 flex items-center justify-center text-slate-800 ">
                                             <span className="text-sm">Creating your unique study soundtrack…</span>
                                         </div>
                                     </div>
@@ -717,15 +717,15 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                 {/* Preview section (collapsible) */}
                 {previewOpen && (
                     <section ref={previewRef} className="mt-6">
-                        <div className="rounded-2xl bg-white/95 dark:bg-white/5 backdrop-blur p-6 shadow-md ring-1 ring-black/5 dark:ring-white/10">
+                        <div className="rounded-2xl bg-white/95  backdrop-blur p-6 shadow-md ring-1 ring-black/5 ">
                             <button
                                 className="w-full flex items-center justify-between text-left"
                                 onClick={() => setPreviewOpen((v) => !v)}
                                 aria-expanded={previewOpen}
                             >
                                 <div>
-                                    <h3 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent]">Music Preview</h3>
-                                    <p className="text-xs text-slate-600 dark:text-slate-300">{moodIndicator}</p>
+                                    <h3 className="text-lg font-semibold text-slate-900 ">Music Preview</h3>
+                                    <p className="text-xs text-slate-600 ">{moodIndicator}</p>
                                 </div>
                                 {previewOpen ? <FaChevronUp /> : <FaChevronDown />}
                             </button>
@@ -736,7 +736,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                     <button className={`pb-1 border-b-2 ${previewTab==='lyrics' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500'}`} onClick={() => setPreviewTab('lyrics')}>Lyrics Preview</button>
                                     <button className={`pb-1 border-b-2 ${previewTab==='notes' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500'}`} onClick={() => setPreviewTab('notes')}>Notes Covered</button>
                                 </div>
-                                <div className="mt-3 rounded-lg bg-white/80 dark:bg-white/10 ring-1 ring-black/10 dark:ring-white/10 p-4 max-h-48 overflow-auto text-sm text-slate-800 dark:text-[--color-accent]">
+                                <div className="mt-3 rounded-lg bg-white/80  ring-1 ring-black/10 p-4 max-h-48 overflow-auto text-sm text-slate-800 ">
                                     {previewTab === 'lyrics' ? (
                                         <pre className="whitespace-pre-wrap font-sans">{lyricsText}</pre>
                                     ) : (
@@ -756,11 +756,11 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
 
                                 {/* Edit Controls Panel */}
                                 <div className="mt-4 flex flex-wrap gap-2">
-                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={() => { pushToast('Regenerating lyrics only…'); setLyricsText(lyricsText + '\n\n(Alt verse) Knowledge grows with every line.'); }}>Regenerate Lyrics Only</button>
-                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={() => pushToast('Open genre selector')}>Change Genre</button>
-                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={() => pushToast('Open voice style selector')}>Change Voice Style</button>
-                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={() => pushToast('Adding instrument layer…')}>Add Instrument Layer</button>
-                                    <div className="flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white dark:bg-white/10 dark:ring-white/10">
+                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 " onClick={() => { pushToast('Regenerating lyrics only…'); setLyricsText(lyricsText + '\n\n(Alt verse) Knowledge grows with every line.'); }}>Regenerate Lyrics Only</button>
+                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 " onClick={() => pushToast('Open genre selector')}>Change Genre</button>
+                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 " onClick={() => pushToast('Open voice style selector')}>Change Voice Style</button>
+                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 " onClick={() => pushToast('Adding instrument layer…')}>Add Instrument Layer</button>
+                                    <div className="flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white ">
                                         <span className="text-sm">Adjust Tempo</span>
                                         <input type="range" min={50} max={120} value={tempo} onChange={(e)=>setTempo(Number(e.target.value))} />
                                     </div>
@@ -769,7 +769,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                             </div>
 
                             {/* Tips */}
-                            <p className="mt-4 text-sm text-slate-700 dark:text-slate-300">💡 Tip: You can highlight parts of your notes to create mini-tracks for each concept.</p>
+                            <p className="mt-4 text-sm text-slate-700 ">💡 Tip: You can highlight parts of your notes to create mini-tracks for each concept.</p>
                         </div>
                     </section>
                 )}
@@ -777,24 +777,24 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
 
             {/* Recent Songs */}
             <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 mt-8">
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent] mb-3">Recently Generated Songs</h2>
+                <h2 className="text-lg font-semibold text-slate-900  mb-3">Recently Generated Songs</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {(recentTracks.slice(0,3)).map((t, i) => (
-                        <div key={t.id} className="rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur p-4 shadow-md ring-1 ring-black/5 dark:ring-white/10">
+                        <div key={t.id} className="rounded-2xl bg-white/90  backdrop-blur p-4 shadow-md ring-1 ring-black/5 ">
                             <div className="flex items-center gap-3">
                                 <div className={`h-12 w-12 rounded-md bg-gradient-to-br ${i % 2 === 0 ? 'from-primary to-secondary' : 'from-secondary to-primary'}`} />
                                 <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-slate-900 dark:text-[--color-accent] truncate">{t.title}</div>
-                                    <div className="text-xs text-slate-600 dark:text-slate-300">{new Date(t.playedAt).toLocaleString()}</div>
+                                    <div className="font-medium text-slate-900  truncate">{t.title}</div>
+                                    <div className="text-xs text-slate-600 ">{new Date(t.playedAt).toLocaleString()}</div>
                                 </div>
                                 {t.href ? (
-                                    <a href={t.href} className="rounded-md px-2 py-1 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10 text-xs">Open</a>
+                                    <a href={t.href} className="rounded-md px-2 py-1 ring-1 ring-black/10 bg-white hover:bg-white/90  text-xs">Open</a>
                                 ) : null}
                             </div>
                         </div>
                     ))}
                     {recentTracks.length === 0 && (
-                        <div className="rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur p-6 text-sm text-slate-700 dark:text-slate-300 ring-1 ring-black/5 dark:ring-white/10">No recent songs yet. Generate your first track above!</div>
+                        <div className="rounded-2xl bg-white/90  backdrop-blur p-6 text-sm text-slate-700  ring-1 ring-black/5 ">No recent songs yet. Generate your first track above!</div>
                     )}
                 </div>
             </section>
