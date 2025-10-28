@@ -16,11 +16,13 @@ import {
 } from "react-icons/fa";
 import { HiOutlineX } from "react-icons/hi";
 import MusicPlayer from "@/components/music/MusicPlayer";
+import PlaylistModal from "@/components/music/PlaylistModal";
 import { composeSongDetailed } from "@/lib/eleven";
 import { generateLyricsFromNotes, buildMusicPromptFromControls } from "@/lib/lyrics";
 import { generateTrackName } from "@/lib/writer";
 import { addRecentTrack, getRecentTracks } from "@/lib/stats";
 import { getGeminiModel } from "@/lib/ai";
+import { addTrack } from "@/lib/storage/music";
 
 // Simple toast messages (local, minimal)
 type Toast = { id: number; message: string };
@@ -150,6 +152,11 @@ export default function MusicPage() {
     const progressRef = useRef<number>(0);
 
     const [recentTracks, setRecentTracks] = useState(() => getRecentTracks());
+    // Manual topics input
+    const [manualTopics, setManualTopics] = useState<string>("");
+    // Track persistence for playlists
+    const [currentTrackId, setCurrentTrackId] = useState<string | null>(null);
+    const [playlistOpen, setPlaylistOpen] = useState<boolean>(false);
 
     async function generateSong() {
         if (!notes) {
@@ -190,6 +197,7 @@ export default function MusicPage() {
                     style: lyricsMode,
                     singer,
                     totalLengthSec: lengthSec,
+                    manualTopics: manualTopics,
                 });
                 if (lyrics && lyrics.trim()) setLyricsText(lyrics.trim());
             } catch {}
@@ -216,6 +224,7 @@ export default function MusicPage() {
                 forceInstrumental: !lyrics,
                 lyricStyle: lyricsMode,
                 durationSec: lengthSec,
+                manualTopics: manualTopics,
             });
 
             // 4) Compose via ElevenLabs
@@ -228,6 +237,13 @@ export default function MusicPage() {
                 setIsGenerating(false);
                 setPlaybackState('playing');
                 pushToast('🎶 Song ready');
+                // Persist track entity for playlist usage
+                try {
+                    const sid = Array.isArray(id) ? id[0] : id;
+                    const tTitle = (trackTitle && trackTitle.trim()) ? trackTitle : `${mood} ${genre}`;
+                    const track = addTrack({ title: tTitle, sessionId: sid, kind: 'lyrics', audioUrl: res.blobUrl, lyrics: lyrics });
+                    setCurrentTrackId(track.id);
+                } catch {}
                 // Save recent track with generated title
                 try {
                     const sid = Array.isArray(id) ? id[0] : id;
@@ -255,6 +271,13 @@ export default function MusicPage() {
                             const t = (trackTitle && trackTitle.trim()) ? trackTitle : `${mood} ${genre}`;
                             addRecentTrack({ id: `${Date.now()}:${t}`, title: t, playedAt: new Date().toISOString(), href });
                             setRecentTracks(getRecentTracks());
+                        } catch {}
+                        // Persist track entity for playlist usage (retry path)
+                        try {
+                            const sid = Array.isArray(id) ? id[0] : id;
+                            const tTitle = (trackTitle && trackTitle.trim()) ? trackTitle : `${mood} ${genre}`;
+                            const track = addTrack({ title: tTitle, sessionId: sid, kind: 'lyrics', audioUrl: res2.blobUrl, lyrics: lyrics });
+                            setCurrentTrackId(track.id);
                         } catch {}
                         try { previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
                         return;
@@ -620,6 +643,18 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                 <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">You can preview generated lyrics before full song generation.</p>
                             </div>
 
+                            {/* Manual Topics Input */}
+                            <div className="mt-4">
+                                <label className="text-xs text-slate-600 dark:text-slate-300">Areas/Topics to cover (optional)</label>
+                                <textarea
+                                  value={manualTopics}
+                                  onChange={(e) => setManualTopics(e.target.value)}
+                                  placeholder="e.g. Backpropagation, Gradient Descent vs Adam, Overfitting, Regularization"
+                                  className="mt-1 w-full rounded-lg bg-white/80 dark:bg-white/10 ring-1 ring-black/10 dark:ring-white/10 p-2 text-sm min-h-20"
+                                />
+                                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">These topics will be prioritized in the lyrics and music prompt.</p>
+                            </div>
+
                             {/* Instruments */}
                             <div className="mt-4">
                                 <div className="text-xs text-slate-600 dark:text-slate-300 mb-2">Instrument Mix</div>
@@ -729,7 +764,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                         <span className="text-sm">Adjust Tempo</span>
                                         <input type="range" min={50} max={120} value={tempo} onChange={(e)=>setTempo(Number(e.target.value))} />
                                     </div>
-                                    <button className="rounded-lg px-3 py-2 bg-secondary text-slate-900 font-medium" onClick={() => pushToast('Saved to Study Mix Playlist')}>Save to Playlist</button>
+                                    <button className="rounded-lg px-3 py-2 bg-secondary text-slate-900 font-medium" onClick={() => setPlaylistOpen(true)} disabled={!currentTrackId}>Save to Playlist</button>
                                 </div>
                             </div>
 
@@ -766,17 +801,20 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
 
             {/* Fixed Music Player shows only after song is generated */}
             {audioUrl && (
-              <MusicPlayer
-                trackTitle={trackTitle || 'Untitled Focus Track'}
-                playbackState={playbackState}
-                isGenerating={false}
-                audioUrl={audioUrl}
-                onPlayPause={handlePlayPause}
-                onStop={handleStop}
-                onTweakSettings={handleTweak}
-                onRegenerate={handleRegenerate}
-                onDownload={handleDownload}
-              />
+              <>
+                <MusicPlayer
+                  trackTitle={trackTitle || 'Untitled Focus Track'}
+                  playbackState={playbackState}
+                  isGenerating={false}
+                  audioUrl={audioUrl}
+                  onPlayPause={handlePlayPause}
+                  onStop={handleStop}
+                  onTweakSettings={handleTweak}
+                  onRegenerate={handleRegenerate}
+                  onDownload={handleDownload}
+                />
+                <PlaylistModal open={playlistOpen} onClose={() => setPlaylistOpen(false)} trackId={currentTrackId} />
+              </>
             )}
 
             {/* Toasts */}

@@ -16,8 +16,9 @@ export async function generateLyricsFromNotes(params: {
   singer: string;
   totalLengthSec?: number; // desired song length in seconds to inform lyric length
   maxLines?: number;
+  manualTopics?: string; // user-provided topics/areas to cover
 }): Promise<string> {
-  const { notes, genre, mood, tempoBpm, energy, instruments = [], style, singer, totalLengthSec, maxLines } = params;
+  const { notes, genre, mood, tempoBpm, energy, instruments = [], style, singer, totalLengthSec, maxLines, manualTopics } = params;
 
   // Estimate a target number of lines from length and tempo
   const baseLpm = 16; // lines per minute baseline
@@ -31,7 +32,8 @@ export async function generateLyricsFromNotes(params: {
       ? 'Teach the concepts with clear, mnemonic-friendly lines.'
       : 'Blend concise summary with lightly instructional phrasing.';
 
-  const constraints = `Avoid copyrighted lyrics and artist names. Keep it original. Favor short lines (max ~8-12 words). Include verses, a memorable chorus, and an optional bridge. Target around ${targetLines} lines in total to match the song length.`;
+  const manual = (manualTopics && manualTopics.trim()) ? `\nPriority topics to include (verbatim concepts, woven naturally):\n${manualTopics.trim()}\n` : '';
+  const constraints = `Avoid copyrighted lyrics and artist names. Keep it original. Favor short lines (max ~8-12 words). Include verses, a memorable chorus, and an optional bridge. Target around ${targetLines} lines in total to match the song length.${manual}`;
 
   const context = `Notes context (may include markdown):\n\n${notes.slice(0, 5000)}`;
 
@@ -77,8 +79,9 @@ export function buildMusicPromptFromControls(params: {
   forceInstrumental?: boolean;
   lyricStyle?: LyricsStyle;
   durationSec?: number;
+  manualTopics?: string;
 }): string {
-  const { notes, lyrics, genre, mood, tempoBpm, energy, instruments = [], singer, forceInstrumental, lyricStyle, durationSec } = params;
+  const { notes, lyrics, genre, mood, tempoBpm, energy, instruments = [], singer, forceInstrumental, lyricStyle, durationSec, manualTopics } = params;
 
   // Helper to keep the final prompt under ElevenLabs 2000-char limit by trimming notes first
   const MAX_PROMPT = 2000;
@@ -120,6 +123,10 @@ export function buildMusicPromptFromControls(params: {
   }
   parts.push('Do not reference specific artists or copyrighted works.');
   parts.push('Ensure a clear musical structure (intro, verse, chorus, bridge, outro as needed).');
+  if (manualTopics && manualTopics.trim()) {
+    parts.push('Priority topics to cover (use these concepts explicitly):');
+    parts.push(manualTopics.trim());
+  }
   parts.push('Focus lyrical content and themes on the following key notes/topics:');
 
   // We will trim notes to fit within the max prompt size
