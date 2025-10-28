@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Collection, addSessionToCollection, deleteCollection, getCollection } from "@/lib/storage/collections";
 import { listSessions } from "@/lib/storage/sessions";
 import SelectDialog from "@/components/music/SelectDialog";
-import { FaFolder, FaPlus, FaTrash } from "react-icons/fa";
+import { FaFolder, FaPlus, FaTrash, FaEye } from "react-icons/fa";
 
 export type CollectionCardProps = {
   collection: Collection | { id: string; name: string; createdAt: string; sessionIds?: string[] };
@@ -12,6 +13,7 @@ export type CollectionCardProps = {
 };
 
 export default function CollectionCard({ collection, onChanged }: CollectionCardProps) {
+  const router = useRouter();
   const [openSelect, setOpenSelect] = useState(false);
   const [working, setWorking] = useState(false);
 
@@ -61,6 +63,17 @@ export default function CollectionCard({ collection, onChanged }: CollectionCard
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm bg-blue-100 text-blue-800 hover:bg-blue-200"
+            onClick={() => {
+              try { router.push(`/study/collection/${collection.id}`); }
+              catch { if (typeof window !== 'undefined') window.location.href = `/study/collection/${collection.id}`; }
+            }}
+            disabled={working}
+            title="View collection"
+          >
+            <FaEye /> View
+          </button>
           <button
             className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
             onClick={() => setOpenSelect(true)}
