@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getGeminiModel } from "@/lib/ai";
 import { incStat } from "@/lib/stats";
@@ -37,6 +37,13 @@ export default function QuizPage() {
     details: { id: string; correct: boolean; explanation?: string; correctAnswer?: string | string[] }[];
   }>(null);
   const [showResult, setShowResult] = useState(false);
+
+  // Timer state
+  const [durationSec, setDurationSec] = useState<number>(15 * 60); // default 15 minutes
+  const [remainingSec, setRemainingSec] = useState<number>(15 * 60);
+  const [timerRunning, setTimerRunning] = useState<boolean>(false);
+  const tickRef = useRef<number | null>(null);
+  const autoSubmittedRef = useRef<boolean>(false);
 
   // Read session context from sessionStorage, with robust fallback to local sessions store
   const sessionText = useMemo(() => {
@@ -84,6 +91,68 @@ export default function QuizPage() {
     return "Session";
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Manage countdown timer lifecycle
+  useEffect(() => {
+    // Start timer when a quiz becomes available
+    if (quiz) {
+      setRemainingSec(durationSec);
+      setTimerRunning(true);
+      autoSubmittedRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quiz]);
+
+  useEffect(() => {
+    if (!timerRunning) {
+      if (tickRef.current) {
+        window.clearInterval(tickRef.current);
+        tickRef.current = null;
+      }
+      return;
+    }
+    // Create ticking interval
+    tickRef.current = window.setInterval(() => {
+      setRemainingSec((prev) => {
+        if (prev <= 1) {
+          // Time up: stop and auto-submit once
+          if (tickRef.current) {
+            window.clearInterval(tickRef.current);
+            tickRef.current = null;
+          }
+          setTimerRunning(false);
+          if (!autoSubmittedRef.current && quiz && !submitting && !showResult) {
+            autoSubmittedRef.current = true;
+            // Auto-submit answers
+            onSubmit(true);
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000) as unknown as number;
+    return () => {
+      if (tickRef.current) {
+        window.clearInterval(tickRef.current);
+        tickRef.current = null;
+      }
+    };
+  }, [timerRunning, quiz, submitting, showResult]);
+
+  function formatTime(sec: number) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    const mm = String(m).padStart(2, '0');
+    const ss = String(s).padStart(2, '0');
+    return `${mm}:${ss}`;
+  }
+
+  function resetTimer(newDuration: number) {
+    setDurationSec(newDuration);
+    setRemainingSec(newDuration);
+    // If a quiz exists, keep the current running state; otherwise paused
+    if (quiz) setTimerRunning(true);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -154,10 +223,13 @@ Notes (may include non-content administrative headers—ignore those):\n---\n${n
     });
   }
 
-  async function onSubmit() {
+  async function onSubmit(auto = false) {
     if (!quiz) return;
+    if (submitting) return; // guard
     setSubmitting(true);
     setError(null);
+    // stop timer while grading
+    setTimerRunning(false);
     try {
       const model = getGeminiModel();
       const payload = {
@@ -242,7 +314,32 @@ Rules:
             </button>
             <h1 className="text-lg font-semibold text-slate-800">{quiz?.title || `Quiz: ${sessionTitle}`}</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {quiz && (
+              <div className="flex items-center gap-2 rounded-full bg-slate-100 px-2 py-1 ring-1 ring-black/10" title="Time remaining. The quiz will auto-submit when time is up.">
+                <span className={`text-sm font-mono ${remainingSec <= 60 ? 'text-red-600' : 'text-slate-800'}`}>{formatTime(remainingSec)}</span>
+                <select
+                  aria-label="Select quiz duration"
+                  className="bg-transparent text-xs text-slate-600 outline-none"
+                  value={durationSec}
+                  onChange={(e) => resetTimer(Number(e.target.value))}
+                  disabled={submitting}
+                >
+                  <option value={300}>5m</option>
+                  <option value={600}>10m</option>
+                  <option value={900}>15m</option>
+                  <option value={1800}>30m</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setTimerRunning(v => !v)}
+                  className="text-xs rounded px-2 py-1 bg-white ring-1 ring-black/10 hover:bg-slate-50"
+                  aria-pressed={timerRunning}
+                >
+                  {timerRunning ? 'Pause' : 'Resume'}
+                </button>
+              </div>
+            )}
             <button onClick={regenerate} className="rounded-lg px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 ring-1 ring-blue-200">Generate New</button>
             <button onClick={() => router.push(`/study/${routeId || ""}`)} className="rounded-lg px-3 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 ring-1 ring-black/10">Terminate</button>
           </div>
