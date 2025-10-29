@@ -162,6 +162,26 @@ export function buildMusicPromptFromControls(params: {
   if (typeof params.layeredVocals === 'number') parts.push(`Number of vocal layers: ${params.layeredVocals}.`);
   if (params.instrumentVariation) parts.push('Vary instruments across sections for interest.');
   if (params.songStructure && params.songStructure.length) parts.push(`Song structure: ${params.songStructure.join(' – ')}.`);
+
+  // Strongly request sung vocals and structural timing per Eleven Music guide
+  parts.push('This track must include sung vocals using the provided lyrics; do NOT generate instrumental-only audio.');
+  parts.push('Lyrics begin at 0 seconds (optionally after a very short 1–2 bar intro). Ensure the vocals are clearly sung, on pitch, and mixed forward.');
+
+  // Multi-vocal directives
+  const singerLower = (singer || '').toLowerCase();
+  if (singerLower.includes('duet')) {
+    const duoLabel = params.vocalType ? `two ${params.vocalType.toLowerCase()} singers` : 'two singers';
+    parts.push(`Arrange as a duet: ${duoLabel} alternate lines in the verses and harmonize together in the choruses. Use call-and-response phrasing and tight harmonies.`);
+    parts.push('Explicitly render TWO distinct vocal timbres so the duet is obvious.');
+  } else if (singerLower.includes('choir') || singerLower.includes('group')) {
+    const layers = typeof params.layeredVocals === 'number' ? Math.max(3, params.layeredVocals) : 4;
+    parts.push(`Arrange for an ensemble: multiple voices (${layers}+ layers) with stacked harmonies, wider stereo spread, and unified choruses.`);
+  } else if (singerLower.includes('rapper')) {
+    parts.push('Primary delivery is rhythmic rap but still include sung hooks for the chorus using the provided lyrics.');
+  } else if (singerLower.includes('spoken') || singerLower.includes('narrator') || singerLower.includes('storyteller')) {
+    parts.push('Primary delivery is spoken-word narration, but favor melodic/sung cadence where natural so the lyrics feel musical.');
+  }
+
   if (params.mathMode) {
     parts.push('Math Mode Enhancements:');
     if (params.beatAlignment) parts.push('- Align beat to the rhythm of equations.');
@@ -173,7 +193,7 @@ export function buildMusicPromptFromControls(params: {
 
   // Genre-specific guidance to help the model follow the style more reliably
   const genreHints: Record<string, string> = {
-    'afrobeats': 'Use syncopated Afrobeat/Afrobeats rhythms, West African-inspired percussion (congas, shakers), off-beat hi-hats, log drums (Amapiano influence optional), warm bass grooves, and call-and-response feel. Avoid EDM drops or trap-style 808 patterns.',
+    'afrobeats': 'Use syncopated Afrobeat/Afrobeats rhythms, West African-inspired percussion (congas, shakers), off-beat hi-hats, log drums (Amapiano influence optional), warm bass grooves, and call-and-response feel. Can include Nigerian pidgin. Avoid EDM drops or trap-style 808 patterns.',
     'lo-fi chill': 'Use dusty hip-hop drums, vinyl crackle, soft Rhodes/piano chords, gentle sidechain, mellow bass. Avoid bright EDM leads or aggressive drums.',
     'edm / dance': 'Use four-on-the-floor kick pattern, sidechained synth pads, energetic risers, bright leads, and modern club mix. Avoid jazz or acoustic textures.',
     'hip-hop / rap': 'Use swung hip-hop drums, punchy snares, 808 or sub bass, sparse melodic motifs. Avoid upbeat pop chords or EDM supersaws.',
@@ -193,7 +213,7 @@ export function buildMusicPromptFromControls(params: {
     parts.push('Provided lyrics:');
     parts.push(lyrics.trim());
   } else {
-    parts.push(`Include tasteful, simple vocals. Vocal timbre/voice style: ${singer}.`);
+    parts.push(`Include clear, melodic vocals. Vocal timbre/voice style: ${singer}.`);
   }
   parts.push('Do not reference specific artists or copyrighted works.');
   parts.push('Ensure a clear musical structure (intro, verse, chorus, bridge, outro as needed).');
