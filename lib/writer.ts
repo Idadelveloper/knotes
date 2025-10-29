@@ -5,6 +5,7 @@
 
 import { getGeminiModel } from './ai';
 
+
 export type WriterTone = 'formal' | 'neutral' | 'casual';
 export type WriterFormat = 'markdown' | 'plain-text';
 export type WriterLength = 'short' | 'medium' | 'long';
@@ -57,7 +58,7 @@ async function createWriter(opts?: WriterOptions, hooks?: { onDownloadStart?: ()
     tone: opts?.tone ?? 'neutral',
     format: opts?.format ?? 'plain-text',
     length: opts?.length ?? 'short',
-    sharedContext: opts?.sharedContext ?? 'Generate a short, creative title for a study song with vocals. No quotes, 2–6 words.',
+    sharedContext: opts?.sharedContext ?? 'Generate exactly one short, creative title for a study song with vocals. Strictly output only the title text on a single line. Do not include quotes, lists, numbering, or extra commentary. 2–6 words.',
     expectedInputLanguages: opts?.expectedInputLanguages ?? ['en'],
     expectedContextLanguages: opts?.expectedContextLanguages ?? ['en'],
     outputLanguage: opts?.outputLanguage ?? 'en',
@@ -84,10 +85,26 @@ async function createWriter(opts?: WriterOptions, hooks?: { onDownloadStart?: ()
   return g.Writer.create(withMonitor());
 }
 
-export async function generateTrackName(params: GenerateTrackNameParams): Promise<{ title: string; used: 'writer' | 'gemini' | 'fallback'; }> {
+export async function generateTrackName(params: GenerateTrackNameParams): Promise<{ title: string; used: 'writer' | 'firebase' | 'fallback'; }> {
   const { description, context, options, onDownloadProgress, onDownloadStart } = params;
   const input = description?.trim();
-  const ctx = context ?? 'Return only the title text, without quotes, emojis, or trailing punctuation.';
+  const strictCtx = 'Output exactly one track title on a single line. No lists, no numbering, no quotes, no emojis, no commentary.';
+  const ctx = context ? `${strictCtx}\n${context}` : strictCtx;
+
+  function cleanTitle(raw: string): string {
+    const text = String(raw || '')
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/^here are.*$/i, '')
+      .replace(/^title options?:.*$/i, '')
+      .trim();
+    const firstLine = text.split(/\r?\n/).map(s => s.replace(/^[-*•\d).\s]+/, '').trim()).filter(Boolean)[0] || '';
+    let t = firstLine.replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+    t = t.replace(/[\s]+/g, ' ').trim();
+    t = t.replace(/[\.:;,!]+$/g, '');
+    // keep it reasonably short
+    if (t.length > 80) t = t.slice(0, 80).trim();
+    return t;
+  }
 
   // Try Writer API first
   try {
@@ -99,25 +116,25 @@ export async function generateTrackName(params: GenerateTrackNameParams): Promis
           { context: ctx },
         );
         writer.destroy?.();
-        const cleaned = (out || '').split('\n')[0].trim().replace(/^"|"$/g, '');
+        const cleaned = cleanTitle(out);
         if (cleaned) return { title: cleaned, used: 'writer' };
       }
     }
   } catch (e) {
-    console.warn('[Writer] generateTrackName failed, falling back to Gemini:', e);
+    console.warn('[Writer] generateTrackName failed, Writer unavailable or error:', e);
   }
 
-  // Fallback to Gemini (if configured) – keep identical behavior to prior flow
+  // Firebase AI Logic fallback via getGeminiModel (uses direct GoogleGenAI or Firebase AI under the hood)
   try {
-    const model = getGeminiModel();
-    const prompt = `Generate a short, creative music track title (2–6 words) for instrumental background study music. No quotes or punctuation at the end.\nDescription: ${input}`;
-    const res = await model.generateContent(prompt);
+    const model = getGeminiModel('gemini-2.0-flash-lite');
+    const prompt = `Generate exactly one short, creative music track title (2–6 words). Return only the title text on a single line. No lists, no numbering, no quotes, no emojis, no commentary.\nDescription: ${input}`;
+    const res = await model.generateContent(prompt as any);
     const txt = (res?.response?.text?.() as string) || '';
-    const cleaned = (txt || '').split('\n')[0].trim().replace(/^"|"$/g, '');
-    if (cleaned) return { title: cleaned, used: 'gemini' };
+    const cleaned = cleanTitle(txt);
+    if (cleaned) return { title: cleaned, used: 'firebase' };
   } catch {}
 
-  // Final fallback
-  const simple = input.split(/[.,]/)[0].trim();
+  // Final fallback if both Writer and Firebase AI fail
+  const simple = (input || '').split(/[\n\r\.]/)[0].trim();
   return { title: simple || 'Generated Track', used: 'fallback' };
 }

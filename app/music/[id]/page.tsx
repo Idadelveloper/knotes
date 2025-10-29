@@ -20,7 +20,7 @@ import PlaylistModal from "@/components/music/PlaylistModal";
 import { composeSongDetailed } from "@/lib/eleven";
 import { generateLyricsFromNotes, buildMusicPromptFromControls } from "@/lib/lyrics";
 import { generateTrackName } from "@/lib/writer";
-import { addRecentTrack, getRecentTracks } from "@/lib/stats";
+import { addRecentTrack, getRecentTracks, incStat } from "@/lib/stats";
 import { getGeminiModel } from "@/lib/ai";
 import { addTrack } from "@/lib/storage/music";
 
@@ -28,14 +28,7 @@ import { addTrack } from "@/lib/storage/music";
 type Toast = { id: number; message: string };
 
 const GENRES = [
-    "Pop",
-    "Hip-Hop / Rap",
-    "Classical",
-    "Acoustic",
-    "Lo-Fi Chill",
-    "Afrobeats",
-    "EDM / Dance",
-    "Jazz / Soul",
+    'Pop', 'Hip-hop', 'Lo-fi', 'Rock', 'Classical', 'Jazz', 'Afrobeat', 'EDM', 'Country', 'R&B', 'Trap', 'Reggaeton', 'Blues', 'Folk', 'Soul', 'Chillwave', 'Synthwave', 'Acoustic', 'Ambient', 'Funk', 'Amapiano'
 ] as const;
 
 const MOODS = [
@@ -49,12 +42,13 @@ const MOODS = [
 
 type Energy = "Low" | "Medium" | "High";
 
-const INSTRUMENTS = ["Piano", "Guitar", "Synth", "Rain", "Strings", "Bass", "Waves"] as const;
+const INSTRUMENTS = ['Acoustic','Electronic','Orchestral','Minimal','Full Band','Lo-fi','Jazz Ensemble','Pop Band','Cinematic','Ambient','Rock Setup'] as const;
 
 export default function MusicPage() {
     const { id } = (require('next/navigation') as any).useParams?.() || {};
     const [notes, setNotes] = useState<string>('');
     const [sessionTitle, setSessionTitle] = useState<string>('');
+    const [mode, setMode] = useState<'normal' | 'math'>('normal');
 
     useEffect(() => {
         if (!id) return;
@@ -170,18 +164,8 @@ export default function MusicPage() {
             setPlaybackState('loading');
             setAudioUrl(undefined);
 
-            // 1) Build description for title
+            // 1) Prepare instruments list
             const instrumentList = Object.keys(instrumentMix).filter((k) => instrumentMix[k]);
-            const desc = `${mood} ${genre} • ${energy} energy ${tempo} BPM${instrumentList.length ? ' • ' + instrumentList.join(', ') : ''}`;
-            try {
-                const { title } = await generateTrackName({ description: desc, context: `Notes title: ${sessionTitle}` });
-                setTrackTitle(title);
-                try { if (id) localStorage.setItem(`knotes_song_title_${Array.isArray(id)?id[0]:id}`, title); } catch {}
-            } catch {
-                const fallbackTitle = `${mood} ${genre}`;
-                setTrackTitle(fallbackTitle);
-                try { if (id) localStorage.setItem(`knotes_song_title_${Array.isArray(id)?id[0]:id}`, fallbackTitle); } catch {}
-            }
             setGenStep(1);
 
             // 2) Generate lyrics (based on entire lecture)
@@ -198,9 +182,56 @@ export default function MusicPage() {
                     singer,
                     totalLengthSec: lengthSec,
                     manualTopics: manualTopics,
+                    // new lyric settings
+                    toneMood: mood,
+                    persona,
+                    creativityLevel,
+                    complexity,
+                    addHumor,
+                    learningIntent,
+                    focusTopics: focusTopicsInput.split(',').map(s=>s.trim()).filter(Boolean),
+                    repetitionLevel,
+                    lyricLength,
+                    factualAccuracy,
+                    // math
+                    mathMode: mode==='math',
+                    formulaStyle,
+                    equationFrequency,
+                    symbolPronunciation,
+                    formulaMnemonics,
+                    conceptRhymes,
+                    stepByStep,
+                    callAndResponse,
+                    addSimpleExamples,
+                    strictFormulaPreservation,
                 });
                 if (lyrics && lyrics.trim()) setLyricsText(lyrics.trim());
             } catch {}
+
+            // Generate track title — prioritize lyrics, then transcript/notes, then settings description
+            try {
+                const instrumentList = Object.keys(instrumentMix).filter((k) => instrumentMix[k]);
+                const settingsDesc = `${mood} ${genre} • ${energy} energy ${Math.round(tempo)} BPM${instrumentList.length ? ' • ' + instrumentList.join(', ') : ''}`;
+                let description = '';
+                if (lyrics && lyrics.trim()) {
+                    // Base title on the actual lyrics
+                    description = `Lyrics for the song (use to derive a concise track title):\n${lyrics.slice(0, 4000)}`;
+                } else if (notes && notes.trim()) {
+                    // Fall back to transcript/notes when no lyrics
+                    description = `Transcript/notes to base the song title on:\n${notes.slice(0, 4000)}`;
+                } else {
+                    // Final fallback: use settings
+                    description = settingsDesc;
+                }
+                const { title } = await generateTrackName({ description, context: `Session: ${sessionTitle}` });
+                setTrackTitle(title);
+                try { if (id) localStorage.setItem(`knotes_song_title_${Array.isArray(id)?id[0]:id}`, title); } catch {}
+            } catch {
+                const fb = `${mood} ${genre}`;
+                setTrackTitle(fb);
+                try { if (id) localStorage.setItem(`knotes_song_title_${Array.isArray(id)?id[0]:id}`, fb); } catch {}
+            }
+
             setGenStep(2);
 
             // Generate topics for "Notes Covered"
@@ -225,6 +256,25 @@ export default function MusicPage() {
                 lyricStyle: lyricsMode,
                 durationSec: lengthSec,
                 manualTopics: manualTopics,
+                // Expanded music settings
+                dynamicTempo,
+                beatType,
+                instrumentDensity,
+                backgroundVocals,
+                effects,
+                vocalType,
+                vocalEmotion,
+                vocalAccent,
+                layeredVocals,
+                instrumentVariation,
+                songStructure,
+                // Math mode enhancements
+                mathMode: mode==='math',
+                beatAlignment,
+                tempoSync,
+                keywordEmphasis,
+                autoChorusBuilder,
+                backgroundChants,
             });
 
             // 4) Compose via ElevenLabs
@@ -247,6 +297,7 @@ export default function MusicPage() {
                 setIsGenerating(false);
                 setPlaybackState('playing');
                 pushToast('🎶 Song ready');
+                try { incStat('musicGenerations', 1); } catch {}
                 // Persist track entity for playlist usage (with cached URL if available)
                 try {
                     const sid = Array.isArray(id) ? id[0] : id;
@@ -319,17 +370,269 @@ export default function MusicPage() {
     function handleStop() {
         setPlaybackState('stopped');
     }
+    async function regenerateLyricsOnly() {
+        if (!notes) return;
+        try {
+            pushToast('Regenerating lyrics…');
+            const instrumentList = Object.keys(instrumentMix).filter((k) => instrumentMix[k]);
+            const lyrics = await generateLyricsFromNotes({
+                notes,
+                genre,
+                mood,
+                tempoBpm: Math.round(tempo),
+                energy,
+                instruments: instrumentList,
+                style: lyricsMode,
+                singer,
+                totalLengthSec: lengthSec,
+                manualTopics: manualTopics,
+                toneMood: mood,
+                persona,
+                creativityLevel,
+                complexity,
+                addHumor,
+                learningIntent,
+                focusTopics: focusTopicsInput.split(',').map(s=>s.trim()).filter(Boolean),
+                repetitionLevel,
+                lyricLength,
+                factualAccuracy,
+                mathMode: mode==='math',
+                formulaStyle,
+                equationFrequency,
+                symbolPronunciation,
+                formulaMnemonics,
+                conceptRhymes,
+                stepByStep,
+                callAndResponse,
+                addSimpleExamples,
+                strictFormulaPreservation,
+            });
+            if (lyrics && lyrics.trim()) setLyricsText(lyrics.trim());
+        } catch (e:any) {
+            console.error(e);
+            pushToast('Failed to regenerate lyrics');
+        }
+    }
+    async function regenerateMusicOnly() {
+        try {
+            pushToast('Re-composing music…');
+            setIsGenerating(true);
+            const instrumentList = Object.keys(instrumentMix).filter((k) => instrumentMix[k]);
+            const prompt = buildMusicPromptFromControls({
+                notes,
+                lyrics: lyricsText,
+                genre,
+                mood,
+                tempoBpm: Math.round(tempo),
+                energy,
+                instruments: instrumentList,
+                singer,
+                forceInstrumental: false,
+                lyricStyle: lyricsMode,
+                durationSec: lengthSec,
+                manualTopics,
+                dynamicTempo,
+                beatType,
+                instrumentDensity,
+                backgroundVocals,
+                effects,
+                vocalType,
+                vocalEmotion,
+                vocalAccent,
+                layeredVocals,
+                instrumentVariation,
+                songStructure,
+                mathMode: mode==='math',
+                beatAlignment,
+                tempoSync,
+                keywordEmphasis,
+                autoChorusBuilder,
+                backgroundChants,
+            });
+            const lengthMs = Math.max(3000, Math.min(300000, Math.round(lengthSec * 1000)));
+            const res = await composeSongDetailed({ prompt, musicLengthMs: lengthMs, forceInstrumental: false });
+            let stableUrl = res.blobUrl;
+            try {
+                const newId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `t_${Date.now()}`;
+                const blob = await (await fetch(res.blobUrl)).blob();
+                const cache = await caches.open('KNOTES_CACHE_V1');
+                stableUrl = `/cached-audio/${newId}.mp3`;
+                await cache.put(stableUrl, new Response(blob, { headers: { 'Content-Type': 'audio/mpeg' } }));
+            } catch {}
+            setAudioUrl(stableUrl);
+            setIsGenerating(false);
+            setPlaybackState('playing');
+            pushToast('🎧 New mix ready');
+        } catch (e:any) {
+            console.error(e);
+            setIsGenerating(false);
+            pushToast('Failed to regenerate music');
+        }
+    }
     function handleRegenerate() { generateSong(); }
-    function handleDownload() {
+    async function handleDownload() {
         if (!audioUrl) return;
+        try {
+            const resp = await fetch(audioUrl, { mode: 'cors' });
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${(trackTitle || 'study-track').replace(/[^a-z0-9-_ ]/gi, '')}.mp3`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(()=> URL.revokeObjectURL(url), 2000);
+        } catch {
+            const a = document.createElement('a');
+            a.href = audioUrl;
+            a.download = `${(trackTitle || 'study-track').replace(/[^a-z0-9-_ ]/gi, '')}.mp3`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+    }
+    function handleTweak() { pushToast('Open tweak panel'); }
+    function handleCopyLyrics() {
+        try {
+            navigator.clipboard.writeText(lyricsText || '');
+            pushToast('Lyrics copied');
+        } catch {}
+    }
+    function handleDownloadLyrics() {
+        const blob = new Blob([lyricsText || ''], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = audioUrl;
-        a.download = `${(trackTitle || 'study-track').replace(/[^a-z0-9-_ ]/gi, '')}.mp3`;
+        a.href = url;
+        a.download = `${(trackTitle || 'lyrics').replace(/[^a-z0-9-_ ]/gi, '')}.txt`;
         document.body.appendChild(a);
         a.click();
         a.remove();
+        setTimeout(()=> URL.revokeObjectURL(url), 2000);
     }
-    function handleTweak() { pushToast('Open tweak panel'); }
+
+    const presetKey = useMemo(()=> {
+        const sid = Array.isArray(id) ? id?.[0] : id;
+        return sid ? `knotes_music_preset_${sid}` : '';
+    }, [id]);
+
+    function savePreset() {
+        try {
+            if (!presetKey) return;
+            const data = {
+                mode,
+                genre,
+                mood,
+                tempo,
+                energy,
+                instrumentMix,
+                singer,
+                lyricsMode,
+                lengthSec,
+                // lyrics settings
+                persona,
+                creativityLevel,
+                complexity,
+                addHumor,
+                learningIntent,
+                focusTopicsInput,
+                repetitionLevel,
+                lyricLength,
+                factualAccuracy,
+                // math lyric
+                formulaStyle,
+                equationFrequency,
+                symbolPronunciation,
+                formulaMnemonics,
+                conceptRhymes,
+                stepByStep,
+                callAndResponse,
+                addSimpleExamples,
+                strictFormulaPreservation,
+                // music settings
+                dynamicTempo,
+                beatType,
+                instrumentDensity,
+                backgroundVocals,
+                effects,
+                vocalType,
+                vocalEmotion,
+                vocalAccent,
+                layeredVocals,
+                instrumentVariation,
+                songStructure,
+                // math music enhancements
+                beatAlignment,
+                tempoSync,
+                keywordEmphasis,
+                autoChorusBuilder,
+                backgroundChants,
+                // output
+                lyricSummaryMode,
+                highlightKeywords,
+                visualizerType,
+                downloadFormat,
+            };
+            localStorage.setItem(presetKey, JSON.stringify(data));
+            pushToast('Preset saved');
+        } catch (e) { console.error(e);}    
+    }
+
+    useEffect(()=>{
+        try {
+            if (!presetKey) return;
+            const raw = localStorage.getItem(presetKey);
+            if (!raw) return;
+            const d = JSON.parse(raw);
+            if (d.mode) setMode(d.mode);
+            if (d.genre) setGenre(d.genre);
+            if (d.mood) setMood(d.mood);
+            if (typeof d.tempo === 'number') setTempo(d.tempo);
+            if (d.energy) setEnergy(d.energy);
+            if (d.instrumentMix) setInstrumentMix(d.instrumentMix);
+            if (d.singer) setSinger(d.singer);
+            if (d.lyricsMode) setLyricsMode(d.lyricsMode);
+            if (typeof d.lengthSec === 'number') setLengthSec(d.lengthSec);
+            if (d.persona) setPersona(d.persona);
+            if (typeof d.creativityLevel === 'number') setCreativityLevel(d.creativityLevel);
+            if (typeof d.complexity === 'number') setComplexity(d.complexity);
+            if (typeof d.addHumor === 'boolean') setAddHumor(d.addHumor);
+            if (Array.isArray(d.learningIntent)) setLearningIntent(d.learningIntent);
+            if (typeof d.focusTopicsInput === 'string') setFocusTopicsInput(d.focusTopicsInput);
+            if (typeof d.repetitionLevel === 'number') setRepetitionLevel(d.repetitionLevel);
+            if (d.lyricLength) setLyricLength(d.lyricLength);
+            if (typeof d.factualAccuracy === 'number') setFactualAccuracy(d.factualAccuracy);
+            if (d.formulaStyle) setFormulaStyle(d.formulaStyle);
+            if (typeof d.equationFrequency === 'number') setEquationFrequency(d.equationFrequency);
+            if (d.symbolPronunciation) setSymbolPronunciation(d.symbolPronunciation);
+            if (typeof d.formulaMnemonics === 'boolean') setFormulaMnemonics(d.formulaMnemonics);
+            if (typeof d.conceptRhymes === 'boolean') setConceptRhymes(d.conceptRhymes);
+            if (typeof d.stepByStep === 'boolean') setStepByStep(d.stepByStep);
+            if (typeof d.callAndResponse === 'boolean') setCallAndResponse(d.callAndResponse);
+            if (typeof d.addSimpleExamples === 'boolean') setAddSimpleExamples(d.addSimpleExamples);
+            if (typeof d.strictFormulaPreservation === 'boolean') setStrictFormulaPreservation(d.strictFormulaPreservation);
+            if (typeof d.dynamicTempo === 'boolean') setDynamicTempo(d.dynamicTempo);
+            if (d.beatType) setBeatType(d.beatType);
+            if (typeof d.instrumentDensity === 'number') setInstrumentDensity(d.instrumentDensity);
+            if (typeof d.backgroundVocals === 'boolean') setBackgroundVocals(d.backgroundVocals);
+            if (Array.isArray(d.effects)) setEffects(d.effects);
+            if (d.vocalType) setVocalType(d.vocalType);
+            if (d.vocalEmotion) setVocalEmotion(d.vocalEmotion);
+            if (d.vocalAccent) setVocalAccent(d.vocalAccent);
+            if (typeof d.layeredVocals === 'number') setLayeredVocals(d.layeredVocals);
+            if (typeof d.instrumentVariation === 'boolean') setInstrumentVariation(d.instrumentVariation);
+            if (Array.isArray(d.songStructure)) setSongStructure(d.songStructure);
+            if (typeof d.beatAlignment === 'boolean') setBeatAlignment(d.beatAlignment);
+            if (typeof d.tempoSync === 'boolean') setTempoSync(d.tempoSync);
+            if (typeof d.keywordEmphasis === 'boolean') setKeywordEmphasis(d.keywordEmphasis);
+            if (typeof d.autoChorusBuilder === 'boolean') setAutoChorusBuilder(d.autoChorusBuilder);
+            if (typeof d.backgroundChants === 'boolean') setBackgroundChants(d.backgroundChants);
+            if (typeof d.lyricSummaryMode === 'boolean') setLyricSummaryMode(d.lyricSummaryMode);
+            if (typeof d.highlightKeywords === 'boolean') setHighlightKeywords(d.highlightKeywords);
+            if (d.visualizerType) setVisualizerType(d.visualizerType);
+            if (d.downloadFormat) setDownloadFormat(d.downloadFormat);
+        } catch (e) { console.error(e); }
+    }, [presetKey]);
 
     // Tiny sample sound for genre/mood preview (optional)
     const audioCtxRef = useRef<AudioContext | null>(null);
@@ -448,9 +751,57 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
 
     // Song config additional state
     const [scope, setScope] = useState<'all' | 'topics'>('all');
-    const [singer, setSinger] = useState<'Male' | 'Female' | 'Duet' | 'AI Voice' | 'Robotic / Filtered'>('AI Voice');
+    const [singer, setSinger] = useState<string>('Solo');
     const [lyricsMode, setLyricsMode] = useState<'summary' | 'educational' | 'mix'>('mix');
     const [lengthSec, setLengthSec] = useState<number>(120); // 2 min default
+
+    // Lyrics settings (expanded)
+    const [persona, setPersona] = useState<'Student'|'Narrator'|'Teacher'|'Rapper'|'Storyteller'>('Student');
+    const [creativityLevel, setCreativityLevel] = useState<number>(40);
+    const [complexity, setComplexity] = useState<number>(3);
+    const [addHumor, setAddHumor] = useState<boolean>(false);
+    const [learningIntent, setLearningIntent] = useState<string[]>([]);
+    const [focusTopicsInput, setFocusTopicsInput] = useState<string>(''); // comma separated
+    const [repetitionLevel, setRepetitionLevel] = useState<number>(40);
+    const [lyricLength, setLyricLength] = useState<'short'|'medium'|'long'|'full'>('medium');
+    const [factualAccuracy, setFactualAccuracy] = useState<number>(60);
+
+    // Math-only lyric settings
+    const [formulaStyle, setFormulaStyle] = useState<'Spoken'|'Sung'|'Simplified'>('Spoken');
+    const [equationFrequency, setEquationFrequency] = useState<number>(50);
+    const [symbolPronunciation, setSymbolPronunciation] = useState<'Phonetic'|'Literal'>('Phonetic');
+    const [formulaMnemonics, setFormulaMnemonics] = useState<boolean>(true);
+    const [conceptRhymes, setConceptRhymes] = useState<boolean>(true);
+    const [stepByStep, setStepByStep] = useState<boolean>(true);
+    const [callAndResponse, setCallAndResponse] = useState<boolean>(false);
+    const [addSimpleExamples, setAddSimpleExamples] = useState<boolean>(true);
+    const [strictFormulaPreservation, setStrictFormulaPreservation] = useState<boolean>(true);
+
+    // Music settings (expanded)
+    const [dynamicTempo, setDynamicTempo] = useState<boolean>(false);
+    const [beatType, setBeatType] = useState<string>('Lo-fi');
+    const [instrumentDensity, setInstrumentDensity] = useState<number>(50);
+    const [backgroundVocals, setBackgroundVocals] = useState<boolean>(false);
+    const [effects, setEffects] = useState<string[]>([]);
+    const [vocalType, setVocalType] = useState<string>('AI Voice');
+    const [vocalEmotion, setVocalEmotion] = useState<string>('Calm');
+    const [vocalAccent, setVocalAccent] = useState<string>('American');
+    const [layeredVocals, setLayeredVocals] = useState<number>(1);
+    const [instrumentVariation, setInstrumentVariation] = useState<boolean>(false);
+    const [songStructure, setSongStructure] = useState<string[]>(['Intro','Verse','Chorus','Bridge']);
+
+    // Math Mode – Music Enhancements
+    const [beatAlignment, setBeatAlignment] = useState<boolean>(true);
+    const [tempoSync, setTempoSync] = useState<boolean>(true);
+    const [keywordEmphasis, setKeywordEmphasis] = useState<boolean>(true);
+    const [autoChorusBuilder, setAutoChorusBuilder] = useState<boolean>(true);
+    const [backgroundChants, setBackgroundChants] = useState<boolean>(false);
+
+    // Output/preview extras
+    const [lyricSummaryMode, setLyricSummaryMode] = useState<boolean>(false);
+    const [highlightKeywords, setHighlightKeywords] = useState<boolean>(false);
+    const [visualizerType, setVisualizerType] = useState<'Waveform'|'Animated Text'|'Karaoke Lyrics'>('Waveform');
+    const [downloadFormat, setDownloadFormat] = useState<'MP3'>('MP3');
 
     // Fun tips during generation
     const funTips = [
@@ -493,21 +844,128 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
 
             <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 pt-16">
                 {/* Page title */}
-                <header className="mb-6">
-                    <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-[--color-accent]">Music Generator</h1>
-                    <p className="text-sm text-slate-700 dark:text-slate-300">Turn your key topics into focus-friendly soundtracks.</p>
+                <header className="mb-6 text-center">
+                    <h1 className="text-3xl sm:text-4xl font-bold text-slate-900">Knotes Composer</h1>
+                    <p className="mt-1 text-sm text-slate-700">Customize how your AI turns study material into music</p>
+                    <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/80 ring-1 ring-black/10 p-1">
+                      <button
+                        className={`px-4 py-1.5 rounded-full text-sm ${mode==='normal' ? 'bg-blue-600 text-white' : 'text-slate-700'}`}
+                        onClick={()=>setMode('normal')}
+                        aria-pressed={mode==='normal'}
+                        title="Normal mode: Best for summaries, concepts, and general subjects."
+                      >🎶 Normal</button>
+                      <button
+                        className={`px-4 py-1.5 rounded-full text-sm ${mode==='math' ? 'bg-purple-600 text-white' : 'text-slate-700'}`}
+                        onClick={()=>setMode('math')}
+                        aria-pressed={mode==='math'}
+                        title="Math mode: Optimized for formulas, equations, and rhythmic mnemonics."
+                      >🧮 Math</button>
+                    </div>
+                    <div className="mt-2 text-xs text-slate-600">
+                      {mode==='normal' ? 'Normal Mode → Best for summaries, concepts, and general subjects.' : 'Math Mode → Optimized for formulas, equations, and rhythmic mnemonics.'}
+                    </div>
                 </header>
 
                 {/* Split view */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Left: Note Insights */}
                     <section className="lg:col-span-1 space-y-4">
                         {/* Song Scope card */}
                         <div className="rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur p-6 shadow-md ring-1 ring-black/5 dark:ring-white/10 transition-transform hover:-translate-y-0.5">
-                            <h2 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent] mb-3">Song Scope</h2>
+                            <h2 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent] mb-1">{sessionTitle || 'Study Upload'}</h2>
                             <div className="flex flex-col gap-2 text-sm">
-                                <div className="text-sm text-slate-700 dark:text-slate-300">Generating based on the entire lecture/upload.</div>
+                                <div className="text-sm text-slate-700 dark:text-slate-300">Generate music based off this entire upload or specify key topic(s)</div>
                             </div>
+                        </div>
+
+                        {/* Lyrics Generation Settings */}
+                        <div className="rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur p-6 shadow-md ring-1 ring-black/5 dark:ring-white/10 transition-transform hover:-translate-y-0.5">
+                          <h2 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent] mb-3">Lyrics Generation Settings</h2>
+                          {/* Group 1: Lyrical Mood & Style */}
+                          <div className="space-y-3">
+                            <div>
+                              <label className="text-xs text-slate-600">Persona</label>
+                              <select className="mt-1 w-full rounded-lg ring-1 ring-black/10 p-2" value={persona} onChange={e=>setPersona(e.target.value as any)}>
+                                {['Student','Narrator','Teacher','Rapper','Storyteller'].map(p=> <option key={p} value={p}>{p}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs text-slate-600">Creativity Level: {creativityLevel}</label>
+                              <input type="range" min={0} max={100} value={creativityLevel} onChange={e=>setCreativityLevel(Number(e.target.value))} className="w-full" />
+                            </div>
+                            <div>
+                              <label className="text-xs text-slate-600">Complexity: {complexity}</label>
+                              <input type="range" min={1} max={5} value={complexity} onChange={e=>setComplexity(Number(e.target.value))} className="w-full" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <input id="humor" type="checkbox" checked={addHumor} onChange={e=>setAddHumor(e.target.checked)} />
+                              <label htmlFor="humor" className="text-sm">Add Humor</label>
+                            </div>
+                          </div>
+                          {/* Group 2: Learning Emphasis */}
+                          <div className="mt-4 space-y-3">
+                            <div>
+                              <label className="text-xs text-slate-600">Learning Intent</label>
+                              <div className="mt-1 flex flex-wrap gap-2">
+                                {['Summarize','Define','Reinforce','Mnemonic','Story-based'].map(chip=>{
+                                  const on = learningIntent.includes(chip);
+                                  return (
+                                    <button key={chip} onClick={()=> setLearningIntent(prev=> on ? prev.filter(x=>x!==chip) : [...prev, chip])} className={`rounded-full px-3 py-1.5 text-sm ring-1 ${on? 'bg-secondary text-slate-900 ring-secondary/60':'bg-white text-slate-700 ring-black/10'}`}>{chip}</button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-xs text-slate-600">Focus Topics (comma-separated)</label>
+                              <input value={focusTopicsInput} onChange={e=>setFocusTopicsInput(e.target.value)} placeholder="e.g. Chain rule, Eigenvalues" className="mt-1 w-full rounded-lg ring-1 ring-black/10 p-2" />
+                            </div>
+                            <div>
+                              <label className="text-xs text-slate-600">Repetition Level: {repetitionLevel}</label>
+                              <input type="range" min={0} max={100} value={repetitionLevel} onChange={e=>setRepetitionLevel(Number(e.target.value))} className="w-full" />
+                            </div>
+                            <div>
+                              <label className="text-xs text-slate-600">Lyric Length</label>
+                              <select className="mt-1 w-full rounded-lg ring-1 ring-black/10 p-2" value={lyricLength} onChange={e=>setLyricLength(e.target.value as any)}>
+                                {['short','medium','long','full'].map(x=> <option key={x} value={x}>{x}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs text-slate-600">Factual Accuracy: {factualAccuracy}</label>
+                              <input type="range" min={0} max={100} value={factualAccuracy} onChange={e=>setFactualAccuracy(Number(e.target.value))} className="w-full" />
+                            </div>
+                          </div>
+                          {/* Group 3: Math Mode Only */}
+                          {mode==='math' && (
+                            <div className="mt-5 rounded-xl border border-purple-200 p-4 bg-purple-50/40">
+                              <div className="text-sm font-medium mb-2">Math Optimization Settings</div>
+                              <div className="grid grid-cols-1 gap-3">
+                                <div>
+                                  <label className="text-xs text-slate-600">Formula Style</label>
+                                  <select className="mt-1 w-full rounded-lg ring-1 ring-black/10 p-2" value={formulaStyle} onChange={e=>setFormulaStyle(e.target.value as any)}>
+                                    {['Spoken','Sung','Simplified'].map(x=> <option key={x} value={x}>{x}</option>)}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-xs text-slate-600">Equation Frequency: {equationFrequency}</label>
+                                  <input type="range" min={0} max={100} value={equationFrequency} onChange={e=>setEquationFrequency(Number(e.target.value))} className="w-full" />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-slate-600">Symbol Pronunciation</label>
+                                  <select className="mt-1 w-full rounded-lg ring-1 ring-black/10 p-2" value={symbolPronunciation} onChange={e=>setSymbolPronunciation(e.target.value as any)}>
+                                    {['Phonetic','Literal'].map(x=> <option key={x} value={x}>{x}</option>)}
+                                  </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                  <label className="flex items-center gap-2"><input type="checkbox" checked={formulaMnemonics} onChange={e=>setFormulaMnemonics(e.target.checked)} />Formula Mnemonics</label>
+                                  <label className="flex items-center gap-2"><input type="checkbox" checked={conceptRhymes} onChange={e=>setConceptRhymes(e.target.checked)} />Concept Rhymes</label>
+                                  <label className="flex items-center gap-2"><input type="checkbox" checked={stepByStep} onChange={e=>setStepByStep(e.target.checked)} />Step-by-Step</label>
+                                  <label className="flex items-center gap-2"><input type="checkbox" checked={callAndResponse} onChange={e=>setCallAndResponse(e.target.checked)} />Call-and-Response</label>
+                                  <label className="flex items-center gap-2"><input type="checkbox" checked={addSimpleExamples} onChange={e=>setAddSimpleExamples(e.target.checked)} />Add Simple Examples</label>
+                                  <label className="flex items-center gap-2"><input type="checkbox" checked={strictFormulaPreservation} onChange={e=>setStrictFormulaPreservation(e.target.checked)} />Strict Formula Preservation</label>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Topics card (only if scope is topics) */}
@@ -558,8 +1016,8 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                         )}
                     </section>
 
-                    {/* Right: Music Generator */}
-                    <section className="lg:col-span-2">
+                    {/* Right: Music Composition & Voice Settings */}
+                    <section className="lg:col-span-1">
                         <div className="rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur p-6 shadow-md ring-1 ring-black/5 dark:ring-white/10">
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-xl font-semibold text-slate-900 dark:text-[--color-accent]">Generate Your Study Music</h2>
@@ -632,7 +1090,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                         value={singer}
                                         onChange={(e) => setSinger(e.target.value as any)}
                                     >
-                                        {(["Male","Female","Duet","AI Voice","Robotic / Filtered"] as const).map((s) => (
+                                        {['Solo','Duet','Choir','Group','Rapper','Storyteller','Narrator','Whisper','Robotic','Operatic','Spoken Word'].map((s) => (
                                             <option key={s} value={s}>{s}</option>
                                         ))}
                                     </select>
@@ -652,28 +1110,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                 </div>
                             </div>
 
-                            {/* Lyrics Style */}
-                            <div className="mt-4">
-                                <div className="text-xs text-slate-600 dark:text-slate-300 mb-1">Lyrics Style</div>
-                                <div className="flex flex-wrap gap-2">
-                                    <button onClick={() => setLyricsMode('summary')} className={`rounded-full px-3 py-1.5 text-sm ring-1 ${lyricsMode==='summary' ? 'bg-secondary text-slate-900 ring-secondary/60' : 'bg-white/80 dark:bg-white/10 text-slate-800 dark:text-[--color-accent] ring-black/10 dark:ring-white/10'}`}>Summarize Notes into Catchy Lyrics</button>
-                                    <button onClick={() => setLyricsMode('educational')} className={`rounded-full px-3 py-1.5 text-sm ring-1 ${lyricsMode==='educational' ? 'bg-secondary text-slate-900 ring-secondary/60' : 'bg-white/80 dark:bg-white/10 text-slate-800 dark:text-[--color-accent] ring-black/10 dark:ring-white/10'}`}>Keep Educational Tone</button>
-                                    <button onClick={() => setLyricsMode('mix')} className={`rounded-full px-3 py-1.5 text-sm ring-1 ${lyricsMode==='mix' ? 'bg-secondary text-slate-900 ring-secondary/60' : 'bg-white/80 dark:bg-white/10 text-slate-800 dark:text-[--color-accent] ring-black/10 dark:ring-white/10'}`}>Mix Both</button>
-                                </div>
-                                <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">You can preview generated lyrics before full song generation.</p>
-                            </div>
-
-                            {/* Manual Topics Input */}
-                            <div className="mt-4">
-                                <label className="text-xs text-slate-600 dark:text-slate-300">Areas/Topics to cover (optional)</label>
-                                <textarea
-                                  value={manualTopics}
-                                  onChange={(e) => setManualTopics(e.target.value)}
-                                  placeholder="e.g. Backpropagation, Gradient Descent vs Adam, Overfitting, Regularization"
-                                  className="mt-1 w-full rounded-lg bg-white/80 dark:bg-white/10 ring-1 ring-black/10 dark:ring-white/10 p-2 text-sm min-h-20"
-                                />
-                                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">These topics will be prioritized in the lyrics and music prompt.</p>
-                            </div>
+                            {/* Removed Lyrics Style and Manual Topics as requested */}
 
                             {/* Instruments */}
                             <div className="mt-4">
@@ -698,6 +1135,92 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                     })}
                                 </div>
                             </div>
+
+                            {/* Music Composition & Voice Settings */}
+                            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-xs text-slate-600">Dynamic Tempo</label>
+                                <div className="mt-1">
+                                  <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={dynamicTempo} onChange={e=>setDynamicTempo(e.target.checked)} /> Enable</label>
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-xs text-slate-600">Beat Type</label>
+                                <select className="mt-1 w-full rounded-lg ring-1 ring-black/10 p-2" value={beatType} onChange={e=>setBeatType(e.target.value)}>
+                                  {['Boom Bap','Trap','Lo-fi','Acoustic','RnB Groove','House','Reggaeton','Drill','Afrobeat Groove','EDM Drop','Jazz Swing','Funk Bounce','Chillhop','Dancehall','Dubstep','Techno','Pop Groove','Rock Beat','Ambient Pulse'].map(x=> <option key={x} value={x}>{x}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-xs text-slate-600">Instrument Density: {instrumentDensity}</label>
+                                <input type="range" min={0} max={100} value={instrumentDensity} onChange={e=>setInstrumentDensity(Number(e.target.value))} className="w-full" />
+                              </div>
+                              <div>
+                                <label className="text-xs text-slate-600">Background Vocals</label>
+                                <div className="mt-1">
+                                  <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={backgroundVocals} onChange={e=>setBackgroundVocals(e.target.checked)} /> Include harmonies</label>
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-xs text-slate-600">Effects</label>
+                                <div className="mt-1 flex flex-wrap gap-2 text-sm">
+                                  {['Reverb','Echo','Lo-fi Filter','Auto-tune'].map(eff=>{
+                                    const on = effects.includes(eff);
+                                    return <button key={eff} onClick={()=> setEffects(prev=> on? prev.filter(x=>x!==eff) : [...prev, eff])} className={`rounded-full px-3 py-1.5 ring-1 ${on? 'bg-secondary text-slate-900 ring-secondary/60':'bg-white text-slate-700 ring-black/10'}`}>{eff}</button>
+                                  })}
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-xs text-slate-600">Vocal Type</label>
+                                <select className="mt-1 w-full rounded-lg ring-1 ring-black/10 p-2" value={vocalType} onChange={e=>setVocalType(e.target.value)}>
+                                  {['Male','Female','Child','Androgynous','Deep','Soft','Energetic','Calm','Robotic','Ethereal','Vintage'].map(x=> <option key={x} value={x}>{x}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-xs text-slate-600">Vocal Emotion</label>
+                                <select className="mt-1 w-full rounded-lg ring-1 ring-black/10 p-2" value={vocalEmotion} onChange={e=>setVocalEmotion(e.target.value)}>
+                                  {['Calm','Confident','Joyful','Chill','Emotional'].map(x=> <option key={x} value={x}>{x}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-xs text-slate-600">Vocal Accent</label>
+                                <select className="mt-1 w-full rounded-lg ring-1 ring-black/10 p-2" value={vocalAccent} onChange={e=>setVocalAccent(e.target.value)}>
+                                  {['American','British','African','Asian'].map(x=> <option key={x} value={x}>{x}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-xs text-slate-600">Layered Vocals: {layeredVocals}</label>
+                                <input type="range" min={1} max={5} value={layeredVocals} onChange={e=>setLayeredVocals(Number(e.target.value))} className="w-full" />
+                              </div>
+                              <div>
+                                <label className="text-xs text-slate-600">Instrument Variation</label>
+                                <div className="mt-1">
+                                  <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={instrumentVariation} onChange={e=>setInstrumentVariation(e.target.checked)} /> Vary per section</label>
+                                </div>
+                              </div>
+                              <div className="sm:col-span-2">
+                                <label className="text-xs text-slate-600">Song Structure</label>
+                                <div className="mt-1 flex flex-wrap gap-2 text-sm">
+                                  {['Intro','Verse','Chorus','Bridge','Outro','Continuous Flow'].map(part=>{
+                                    const on = songStructure.includes(part);
+                                    return <button key={part} onClick={()=> setSongStructure(prev=> on? prev.filter(x=>x!==part) : [...prev, part])} className={`rounded-full px-3 py-1.5 ring-1 ${on? 'bg-secondary text-slate-900 ring-secondary/60':'bg-white text-slate-700 ring-black/10'}`}>{part}</button>
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Math Mode – Music Enhancements */}
+                            {mode==='math' && (
+                              <div className="mt-5 rounded-xl border border-purple-200 p-4 bg-purple-50/40">
+                                <div className="text-sm font-medium mb-2">Math Mode Enhancements</div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                                  <label className="flex items-center gap-2"><input type="checkbox" checked={beatAlignment} onChange={e=>setBeatAlignment(e.target.checked)} />Beat Alignment</label>
+                                  <label className="flex items-center gap-2"><input type="checkbox" checked={tempoSync} onChange={e=>setTempoSync(e.target.checked)} />Tempo Sync</label>
+                                  <label className="flex items-center gap-2"><input type="checkbox" checked={keywordEmphasis} onChange={e=>setKeywordEmphasis(e.target.checked)} />Keyword Emphasis</label>
+                                  <label className="flex items-center gap-2"><input type="checkbox" checked={autoChorusBuilder} onChange={e=>setAutoChorusBuilder(e.target.checked)} />Auto-Chorus Builder</label>
+                                  <label className="flex items-center gap-2"><input type="checkbox" checked={backgroundChants} onChange={e=>setBackgroundChants(e.target.checked)} />Background Chants</label>
+                                </div>
+                              </div>
+                            )}
 
                             {/* Compose CTA */}
                             <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -735,6 +1258,37 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
 
 
                 {/* Preview section (collapsible) */}
+                {/* SECTION 4 — Reinforcement & Output Controls */}
+                <section className="mt-6">
+                  <div className="rounded-2xl bg-white/95 dark:bg-white/5 backdrop-blur p-6 shadow-md ring-1 ring-black/5 dark:ring-white/10">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent] mb-3">Learning Reinforcement & Output</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={lyricSummaryMode} onChange={e=>setLyricSummaryMode(e.target.checked)} /> Lyric Summary Mode</label>
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={highlightKeywords} onChange={e=>setHighlightKeywords(e.target.checked)} /> Highlight Keywords</label>
+                      <div>
+                        <label className="text-xs text-slate-600">Visualizer Type</label>
+                        <select className="mt-1 w-full rounded-lg ring-1 ring-black/10 p-2" value={visualizerType} onChange={e=>setVisualizerType(e.target.value as any)}>
+                          {['Waveform','Animated Text','Karaoke Lyrics'].map(x=> <option key={x} value={x}>{x}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-600">Download Format</label>
+                        <select disabled className="mt-1 w-full rounded-lg ring-1 ring-black/10 p-2" value={downloadFormat} onChange={e=>setDownloadFormat(e.target.value as any)}>
+                          <option value="MP3">MP3</option>
+                        </select>
+                        <p className="text-[11px] text-slate-500 mt-1">More formats coming soon.</p>
+                      </div>
+                      <div className="md:col-span-2 flex items-end justify-end gap-3">
+                        <button onClick={savePreset} className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10">Save Preset</button>
+                        <button onClick={() => generateSong()} disabled={isGenerating || !isReady} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-400 to-green-400 px-5 py-2.5 text-slate-900 font-medium shadow disabled:opacity-60">
+                          <FaMusic /> Generate Music
+                        </button>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-600">This may take a few seconds — your study beats are on the way 🎶</p>
+                  </div>
+                </section>
+
                 {previewOpen && (
                     <section ref={previewRef} className="mt-6">
                         <div className="rounded-2xl bg-white/95 dark:bg-white/5 backdrop-blur p-6 shadow-md ring-1 ring-black/5 dark:ring-white/10">
@@ -776,13 +1330,13 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
 
                                 {/* Edit Controls Panel */}
                                 <div className="mt-4 flex flex-wrap gap-2">
-                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={() => { pushToast('Regenerating lyrics only…'); setLyricsText(lyricsText + '\n\n(Alt verse) Knowledge grows with every line.'); }}>Regenerate Lyrics Only</button>
-                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={() => pushToast('Open genre selector')}>Change Genre</button>
-                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={() => pushToast('Open voice style selector')}>Change Voice Style</button>
-                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={() => pushToast('Adding instrument layer…')}>Add Instrument Layer</button>
+                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={regenerateLyricsOnly}>Regenerate Lyrics</button>
+                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={regenerateMusicOnly}>Regenerate Music</button>
+                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={handleCopyLyrics}>Copy Lyrics</button>
+                                    <button className="rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white hover:bg-white/90 dark:bg-white/10 dark:ring-white/10" onClick={handleDownloadLyrics}>Download Lyrics (txt)</button>
                                     <div className="flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-black/10 bg-white dark:bg-white/10 dark:ring-white/10">
                                         <span className="text-sm">Adjust Tempo</span>
-                                        <input type="range" min={50} max={120} value={tempo} onChange={(e)=>setTempo(Number(e.target.value))} />
+                                        <input type="range" min={50} max={180} value={tempo} onChange={(e)=>setTempo(Number(e.target.value))} />
                                     </div>
                                     <button className="rounded-lg px-3 py-2 bg-secondary text-slate-900 font-medium" onClick={() => setPlaylistOpen(true)} disabled={!currentTrackId}>Save to Playlist</button>
                                 </div>

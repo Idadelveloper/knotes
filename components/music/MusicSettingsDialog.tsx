@@ -48,7 +48,7 @@ const MusicSettingsDialog = ({
             <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/10 text-gray-700 transition-colors" title="Close" aria-label="Close settings">
                 <BsXLg />
             </button>
-            <h1 className="text-2xl font-medium text-center mb-6 text-gray-900">Study Music Generator</h1>
+            <h1 className="text-2xl font-medium text-center mb-6 text-gray-900">Background Study Music</h1>
 
             <div className="flex-grow overflow-y-auto pr-4 -mr-4 mb-6">
                  <div className="mb-5">
@@ -57,7 +57,7 @@ const MusicSettingsDialog = ({
                         name="genre"
                         value={settings.genre}
                         onChange={(e) => handleSettingsChange('genre', e.target.value)}
-                        className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg px-4 py-3 text-base outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-200"
+                        className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg px-4 py-3 text-base outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200"
                     >
                         {GENRES.map(g => <option key={g} value={g}>{g}</option>)
                         }
@@ -70,7 +70,7 @@ const MusicSettingsDialog = ({
                         name="vibe"
                         value={settings.vibe}
                         onChange={(e) => handleSettingsChange('vibe', e.target.value)}
-                        className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg px-4 py-3 text-base outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-200"
+                        className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg px-4 py-3 text-base outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200"
                     >
                         {VIBES.map(v => <option key={v} value={v}>{v}</option>)
                         }
@@ -90,7 +90,7 @@ const MusicSettingsDialog = ({
                             const newTempo = val < 33 ? 'Slow' : val > 66 ? 'Fast' : 'Medium';
                             handleSettingsChange('tempo', newTempo)
                         }}
-                        className="w-full accent-purple-600"
+                        className="w-full accent-emerald-600"
                     />
                 </div>
 
@@ -101,7 +101,7 @@ const MusicSettingsDialog = ({
                             <button
                                 key={level}
                                 onClick={() => handleSettingsChange('energy', level)}
-                                className={`px-4 py-2 rounded-full text-sm transition-colors ${settings.energy === level ? 'bg-purple-600 text-white' : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'}`}>
+                                className={`px-4 py-2 rounded-full text-sm transition-colors ${settings.energy === level ? 'bg-emerald-500 text-white' : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'}`}>
                                 {level}
                             </button>
                         ))}
@@ -115,7 +115,7 @@ const MusicSettingsDialog = ({
                              <button
                                 key={i}
                                 onClick={() => handleSettingsChange('instruments', i)}
-                                className={`px-4 py-2 rounded-full text-sm transition-colors ${settings.instruments.includes(i) ? 'bg-purple-600 text-white' : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'}`}>
+                                className={`px-4 py-2 rounded-full text-sm transition-colors ${settings.instruments.includes(i) ? 'bg-emerald-500 text-white' : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'}`}>
                                 {i}
                             </button>
                         ))}
@@ -127,7 +127,7 @@ const MusicSettingsDialog = ({
              <button
                 onClick={() => onGenerate(settings)}
                 disabled={isGenerating}
-                className="w-full py-4 text-lg font-medium text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition-all shadow-lg hover:shadow-xl disabled:bg-gray-600 disabled:cursor-not-allowed"
+                className="w-full py-4 text-lg font-medium text-white bg-emerald-500 rounded-xl hover:bg-emerald-600 transition-all shadow-lg hover:shadow-xl disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
                 {isGenerating ? 'Initializing...' : 'Generate Music'}
             </button>

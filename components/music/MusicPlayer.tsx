@@ -393,15 +393,31 @@ const MusicPlayer = ({
               <BsGear />
             </button>
             <button
-              onClick={() => {
+              onClick={async () => {
                 try { onDownload(); } catch {}
                 if (audioUrl) {
-                  const a = document.createElement('a');
-                  a.href = audioUrl;
-                  a.download = (trackTitle || 'study-music') + '.mp3';
-                  document.body.appendChild(a);
-                  a.click();
-                  a.remove();
+                  try {
+                    const resp = await fetch(audioUrl, { mode: 'cors' });
+                    const blob = await resp.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    const safeName = (trackTitle || 'study-music').replace(/[^a-z0-9-_ ]/gi, '');
+                    a.href = url;
+                    a.download = safeName + '.mp3';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    setTimeout(() => URL.revokeObjectURL(url), 2000);
+                  } catch (e) {
+                    // Fallback to direct link if fetch fails
+                    const a = document.createElement('a');
+                    const safeName = (trackTitle || 'study-music').replace(/[^a-z0-9-_ ]/gi, '');
+                    a.href = audioUrl;
+                    a.download = safeName + '.mp3';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                  }
                 }
               }}
               title="Download Track"

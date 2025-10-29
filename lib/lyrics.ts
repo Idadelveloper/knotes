@@ -17,6 +17,28 @@ export async function generateLyricsFromNotes(params: {
   totalLengthSec?: number; // desired song length in seconds to inform lyric length
   maxLines?: number;
   manualTopics?: string; // user-provided topics/areas to cover
+  // Expanded lyric controls
+  toneMood?: string; // Calm, Energetic, etc.
+  persona?: string; // Student, Narrator, Teacher, Rapper, Storyteller
+  creativityLevel?: number; // 0-100
+  complexity?: number; // 1-5
+  addHumor?: boolean;
+  learningIntent?: string[]; // Summarize, Define, Reinforce, Mnemonic, Story-based
+  focusTopics?: string[]; // keywords
+  repetitionLevel?: number; // 0-100
+  lyricLength?: 'short'|'medium'|'long'|'full';
+  factualAccuracy?: number; // 0-100 (poetic ↔ academic)
+  // Math mode options (optional)
+  mathMode?: boolean;
+  formulaStyle?: 'Spoken'|'Sung'|'Simplified';
+  equationFrequency?: number; // 0-100
+  symbolPronunciation?: 'Phonetic'|'Literal';
+  formulaMnemonics?: boolean;
+  conceptRhymes?: boolean;
+  stepByStep?: boolean;
+  callAndResponse?: boolean;
+  addSimpleExamples?: boolean;
+  strictFormulaPreservation?: boolean;
 }): Promise<string> {
   const { notes, genre, mood, tempoBpm, energy, instruments = [], style, singer, totalLengthSec, maxLines, manualTopics } = params;
 
@@ -33,9 +55,23 @@ export async function generateLyricsFromNotes(params: {
       : 'Blend concise summary with lightly instructional phrasing.';
 
   const manual = (manualTopics && manualTopics.trim()) ? `\nPriority topics to include (verbatim concepts, woven naturally):\n${manualTopics.trim()}\n` : '';
-  const constraints = `Avoid copyrighted lyrics and artist names. Keep it original. Favor short lines (max ~8-12 words). Include verses, a memorable chorus, and an optional bridge. Target around ${targetLines} lines in total to match the song length.${manual}`;
 
-  const context = `Notes context (may include markdown):\n\n${notes.slice(0, 5000)}`;
+  // Additional knobs
+  const personaLine = params.persona ? `Persona/Voice: ${params.persona}.` : '';
+  const creativityLine = typeof params.creativityLevel === 'number' ? `Creativity: ${Math.round(params.creativityLevel)} (0=factual,100=highly creative).` : '';
+  const complexityLine = typeof params.complexity === 'number' ? `Lyrical complexity/depth: ${params.complexity}/5.` : '';
+  const humorLine = params.addHumor ? `Add light, appropriate humor when suitable.` : '';
+  const learningIntentLine = (params.learningIntent && params.learningIntent.length) ? `Learning intent: ${params.learningIntent.join(', ')}.` : '';
+  const focusTopicsLine = (params.focusTopics && params.focusTopics.length) ? `Must-include keywords: ${params.focusTopics.join(', ')}.` : '';
+  const repetitionLine = typeof params.repetitionLevel === 'number' ? `Repetition: ${Math.round(params.repetitionLevel)} (repeat key ideas accordingly).` : '';
+  const lengthLine = params.lyricLength ? `Lyric length: ${params.lyricLength}.` : '';
+  const factualLine = typeof params.factualAccuracy === 'number' ? `Factual accuracy preference: ${Math.round(params.factualAccuracy)} (0=poetic,100=academic).` : '';
+
+  const mathBlock = params.mathMode ? `\nMath Optimization:\n- Formula style: ${params.formulaStyle || 'Spoken'}\n- Equation frequency: ${typeof params.equationFrequency === 'number' ? params.equationFrequency : 50}\n- Symbol pronunciation: ${params.symbolPronunciation || 'Phonetic'}\n- Mnemonics: ${params.formulaMnemonics ? 'Yes' : 'No'}; Concept rhymes: ${params.conceptRhymes ? 'Yes' : 'No'}; Step-by-step: ${params.stepByStep ? 'Yes' : 'No'}; Call-and-response: ${params.callAndResponse ? 'Yes' : 'No'}; Examples: ${params.addSimpleExamples ? 'Yes' : 'No'}\n- Strict formula preservation: ${params.strictFormulaPreservation ? 'ON' : 'OFF'}\n` : '';
+
+  const constraints = `Avoid copyrighted lyrics and artist names. Keep it original. Favor short lines (max ~8-12 words). Include verses, a memorable chorus, and an optional bridge. Target around ${targetLines} lines in total to match the song length.${manual}\n${personaLine} ${creativityLine} ${complexityLine} ${humorLine} ${learningIntentLine} ${focusTopicsLine} ${repetitionLine} ${lengthLine} ${factualLine}${mathBlock}`;
+
+  const context = `Notes context (main learning content only; ignore administrative meta like course/instructor, assignments, policies, due dates):\n\n${notes.slice(0, 5000)}`;
 
   // Try Chrome Writer first for lyric drafting if available; otherwise Gemini/Firebase via getGeminiModel.
   try {
@@ -80,6 +116,25 @@ export function buildMusicPromptFromControls(params: {
   lyricStyle?: LyricsStyle;
   durationSec?: number;
   manualTopics?: string;
+  // Expanded music settings
+  dynamicTempo?: boolean;
+  beatType?: string;
+  instrumentDensity?: number; // 0-100
+  backgroundVocals?: boolean;
+  effects?: string[]; // Reverb, Echo, Lo-fi Filter, Auto-tune
+  vocalType?: string; // Male, Female, Robotic, Choir, Cartoonish
+  vocalEmotion?: string; // Calm, Confident, Joyful, Chill
+  vocalAccent?: string; // American, British, African, Asian
+  layeredVocals?: number; // 1-5
+  instrumentVariation?: boolean;
+  songStructure?: string[]; // e.g., Intro, Verse, Chorus, Bridge
+  // Math enhancements
+  mathMode?: boolean;
+  beatAlignment?: boolean;
+  tempoSync?: boolean;
+  keywordEmphasis?: boolean;
+  autoChorusBuilder?: boolean;
+  backgroundChants?: boolean;
 }): string {
   const { notes, lyrics, genre, mood, tempoBpm, energy, instruments = [], singer, forceInstrumental, lyricStyle, durationSec, manualTopics } = params;
 
@@ -90,16 +145,55 @@ export function buildMusicPromptFromControls(params: {
   parts.push(`Create a ${mood.toLowerCase()} ${g} song with ${energy.toLowerCase()} energy.`);
   parts.push('Important: Adhere strictly to the requested genre and mood. Do not deviate to other genres.');
   if (tempoBpm) parts.push(`Target tempo around ${tempoBpm} BPM.`);
+  if (params.dynamicTempo) parts.push('Enable dynamic tempo changes aligned to content intensity.');
   if (typeof durationSec === 'number') {
     const m = Math.floor(durationSec / 60);
     const s = Math.round(durationSec % 60);
     parts.push(`Target song duration approximately ${m}m ${s}s.`);
   }
   if (instruments.length) parts.push(`Feature ${instruments.join(', ')}.`);
+  if (params.beatType) parts.push(`Beat type: ${params.beatType}.`);
+  if (typeof params.instrumentDensity === 'number') parts.push(`Instrument density: ${Math.round(params.instrumentDensity)} (0=sparse,100=full band).`);
+  if (params.backgroundVocals) parts.push('Include tasteful background harmonies.');
+  if (params.effects && params.effects.length) parts.push(`Effects to apply: ${params.effects.join(', ')}.`);
+  if (params.vocalType) parts.push(`Vocal type: ${params.vocalType}.`);
+  if (params.vocalEmotion) parts.push(`Vocal emotion: ${params.vocalEmotion}.`);
+  if (params.vocalAccent) parts.push(`Vocal accent: ${params.vocalAccent}.`);
+  if (typeof params.layeredVocals === 'number') parts.push(`Number of vocal layers: ${params.layeredVocals}.`);
+  if (params.instrumentVariation) parts.push('Vary instruments across sections for interest.');
+  if (params.songStructure && params.songStructure.length) parts.push(`Song structure: ${params.songStructure.join(' – ')}.`);
+
+  // Strongly request sung vocals and structural timing per Eleven Music guide
+  parts.push('This track must include sung vocals using the provided lyrics; do NOT generate instrumental-only audio.');
+  parts.push('Lyrics begin at 0 seconds (optionally after a very short 1–2 bar intro). Ensure the vocals are clearly sung, on pitch, and mixed forward.');
+
+  // Multi-vocal directives
+  const singerLower = (singer || '').toLowerCase();
+  if (singerLower.includes('duet')) {
+    const duoLabel = params.vocalType ? `two ${params.vocalType.toLowerCase()} singers` : 'two singers';
+    parts.push(`Arrange as a duet: ${duoLabel} alternate lines in the verses and harmonize together in the choruses. Use call-and-response phrasing and tight harmonies.`);
+    parts.push('Explicitly render TWO distinct vocal timbres so the duet is obvious.');
+  } else if (singerLower.includes('choir') || singerLower.includes('group')) {
+    const layers = typeof params.layeredVocals === 'number' ? Math.max(3, params.layeredVocals) : 4;
+    parts.push(`Arrange for an ensemble: multiple voices (${layers}+ layers) with stacked harmonies, wider stereo spread, and unified choruses.`);
+  } else if (singerLower.includes('rapper')) {
+    parts.push('Primary delivery is rhythmic rap but still include sung hooks for the chorus using the provided lyrics.');
+  } else if (singerLower.includes('spoken') || singerLower.includes('narrator') || singerLower.includes('storyteller')) {
+    parts.push('Primary delivery is spoken-word narration, but favor melodic/sung cadence where natural so the lyrics feel musical.');
+  }
+
+  if (params.mathMode) {
+    parts.push('Math Mode Enhancements:');
+    if (params.beatAlignment) parts.push('- Align beat to the rhythm of equations.');
+    if (params.tempoSync) parts.push('- Slow down tempo slightly during complex formula parts for clarity.');
+    if (params.keywordEmphasis) parts.push('- Emphasize key formulas/keywords with volume or pitch lifts.');
+    if (params.autoChorusBuilder) parts.push('- Build a catchy chorus around the main formula or concept.');
+    if (params.backgroundChants) parts.push('- Add supportive background chants repeating key terms.');
+  }
 
   // Genre-specific guidance to help the model follow the style more reliably
   const genreHints: Record<string, string> = {
-    'afrobeats': 'Use syncopated Afrobeat/Afrobeats rhythms, West African-inspired percussion (congas, shakers), off-beat hi-hats, log drums (Amapiano influence optional), warm bass grooves, and call-and-response feel. Avoid EDM drops or trap-style 808 patterns.',
+    'afrobeats': 'Use syncopated Afrobeat/Afrobeats rhythms, West African-inspired percussion (congas, shakers), off-beat hi-hats, log drums (Amapiano influence optional), warm bass grooves, and call-and-response feel. Can include Nigerian pidgin. Avoid EDM drops or trap-style 808 patterns.',
     'lo-fi chill': 'Use dusty hip-hop drums, vinyl crackle, soft Rhodes/piano chords, gentle sidechain, mellow bass. Avoid bright EDM leads or aggressive drums.',
     'edm / dance': 'Use four-on-the-floor kick pattern, sidechained synth pads, energetic risers, bright leads, and modern club mix. Avoid jazz or acoustic textures.',
     'hip-hop / rap': 'Use swung hip-hop drums, punchy snares, 808 or sub bass, sparse melodic motifs. Avoid upbeat pop chords or EDM supersaws.',
@@ -119,7 +213,7 @@ export function buildMusicPromptFromControls(params: {
     parts.push('Provided lyrics:');
     parts.push(lyrics.trim());
   } else {
-    parts.push(`Include tasteful, simple vocals. Vocal timbre/voice style: ${singer}.`);
+    parts.push(`Include clear, melodic vocals. Vocal timbre/voice style: ${singer}.`);
   }
   parts.push('Do not reference specific artists or copyrighted works.');
   parts.push('Ensure a clear musical structure (intro, verse, chorus, bridge, outro as needed).');
