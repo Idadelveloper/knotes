@@ -28,14 +28,7 @@ import { addTrack } from "@/lib/storage/music";
 type Toast = { id: number; message: string };
 
 const GENRES = [
-    "Pop",
-    "Hip-Hop / Rap",
-    "Classical",
-    "Acoustic",
-    "Lo-Fi Chill",
-    "Afrobeats",
-    "EDM / Dance",
-    "Jazz / Soul",
+    'Pop', 'Hip-hop', 'Lo-fi', 'Rock', 'Classical', 'Jazz', 'Afrobeat', 'EDM', 'Country', 'R&B', 'Trap', 'Reggaeton', 'Blues', 'Folk', 'Soul', 'Chillwave', 'Synthwave', 'Acoustic', 'Ambient', 'Funk', 'Amapiano'
 ] as const;
 
 const MOODS = [
@@ -49,7 +42,7 @@ const MOODS = [
 
 type Energy = "Low" | "Medium" | "High";
 
-const INSTRUMENTS = ["Piano", "Guitar", "Synth", "Rain", "Strings", "Bass", "Waves"] as const;
+const INSTRUMENTS = ['Acoustic','Electronic','Orchestral','Minimal','Full Band','Lo-fi','Jazz Ensemble','Pop Band','Cinematic','Ambient','Rock Setup'] as const;
 
 export default function MusicPage() {
     const { id } = (require('next/navigation') as any).useParams?.() || {};
@@ -462,14 +455,27 @@ export default function MusicPage() {
         }
     }
     function handleRegenerate() { generateSong(); }
-    function handleDownload() {
+    async function handleDownload() {
         if (!audioUrl) return;
-        const a = document.createElement('a');
-        a.href = audioUrl;
-        a.download = `${(trackTitle || 'study-track').replace(/[^a-z0-9-_ ]/gi, '')}.mp3`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        try {
+            const resp = await fetch(audioUrl, { mode: 'cors' });
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${(trackTitle || 'study-track').replace(/[^a-z0-9-_ ]/gi, '')}.mp3`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(()=> URL.revokeObjectURL(url), 2000);
+        } catch {
+            const a = document.createElement('a');
+            a.href = audioUrl;
+            a.download = `${(trackTitle || 'study-track').replace(/[^a-z0-9-_ ]/gi, '')}.mp3`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
     }
     function handleTweak() { pushToast('Open tweak panel'); }
     function handleCopyLyrics() {
@@ -730,7 +736,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
 
     // Song config additional state
     const [scope, setScope] = useState<'all' | 'topics'>('all');
-    const [singer, setSinger] = useState<'Male' | 'Female' | 'Duet' | 'AI Voice' | 'Robotic / Filtered'>('AI Voice');
+    const [singer, setSinger] = useState<string>('Solo');
     const [lyricsMode, setLyricsMode] = useState<'summary' | 'educational' | 'mix'>('mix');
     const [lengthSec, setLengthSec] = useState<number>(120); // 2 min default
 
@@ -996,7 +1002,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                     </section>
 
                     {/* Right: Music Composition & Voice Settings */}
-                    <section className="lg:col-span-2">
+                    <section className="lg:col-span-1">
                         <div className="rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur p-6 shadow-md ring-1 ring-black/5 dark:ring-white/10">
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-xl font-semibold text-slate-900 dark:text-[--color-accent]">Generate Your Study Music</h2>
@@ -1069,7 +1075,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                         value={singer}
                                         onChange={(e) => setSinger(e.target.value as any)}
                                     >
-                                        {(["Male","Female","Duet","AI Voice","Robotic / Filtered"] as const).map((s) => (
+                                        {['Solo','Duet','Choir','Group','Rapper','Storyteller','Narrator','Whisper','Robotic','Operatic','Spoken Word'].map((s) => (
                                             <option key={s} value={s}>{s}</option>
                                         ))}
                                     </select>
@@ -1089,28 +1095,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                                 </div>
                             </div>
 
-                            {/* Lyrics Style */}
-                            <div className="mt-4">
-                                <div className="text-xs text-slate-600 dark:text-slate-300 mb-1">Lyrics Style</div>
-                                <div className="flex flex-wrap gap-2">
-                                    <button onClick={() => setLyricsMode('summary')} className={`rounded-full px-3 py-1.5 text-sm ring-1 ${lyricsMode==='summary' ? 'bg-secondary text-slate-900 ring-secondary/60' : 'bg-white/80 dark:bg-white/10 text-slate-800 dark:text-[--color-accent] ring-black/10 dark:ring-white/10'}`}>Summarize Notes into Catchy Lyrics</button>
-                                    <button onClick={() => setLyricsMode('educational')} className={`rounded-full px-3 py-1.5 text-sm ring-1 ${lyricsMode==='educational' ? 'bg-secondary text-slate-900 ring-secondary/60' : 'bg-white/80 dark:bg-white/10 text-slate-800 dark:text-[--color-accent] ring-black/10 dark:ring-white/10'}`}>Keep Educational Tone</button>
-                                    <button onClick={() => setLyricsMode('mix')} className={`rounded-full px-3 py-1.5 text-sm ring-1 ${lyricsMode==='mix' ? 'bg-secondary text-slate-900 ring-secondary/60' : 'bg-white/80 dark:bg-white/10 text-slate-800 dark:text-[--color-accent] ring-black/10 dark:ring-white/10'}`}>Mix Both</button>
-                                </div>
-                                <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">You can preview generated lyrics before full song generation.</p>
-                            </div>
-
-                            {/* Manual Topics Input */}
-                            <div className="mt-4">
-                                <label className="text-xs text-slate-600 dark:text-slate-300">Areas/Topics to cover (optional)</label>
-                                <textarea
-                                  value={manualTopics}
-                                  onChange={(e) => setManualTopics(e.target.value)}
-                                  placeholder="e.g. Backpropagation, Gradient Descent vs Adam, Overfitting, Regularization"
-                                  className="mt-1 w-full rounded-lg bg-white/80 dark:bg-white/10 ring-1 ring-black/10 dark:ring-white/10 p-2 text-sm min-h-20"
-                                />
-                                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">These topics will be prioritized in the lyrics and music prompt.</p>
-                            </div>
+                            {/* Removed Lyrics Style and Manual Topics as requested */}
 
                             {/* Instruments */}
                             <div className="mt-4">
@@ -1147,7 +1132,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                               <div>
                                 <label className="text-xs text-slate-600">Beat Type</label>
                                 <select className="mt-1 w-full rounded-lg ring-1 ring-black/10 p-2" value={beatType} onChange={e=>setBeatType(e.target.value)}>
-                                  {['Trap','Lo-fi','Acoustic','Reggaeton','Pop','Jazz'].map(x=> <option key={x} value={x}>{x}</option>)}
+                                  {['Boom Bap','Trap','Lo-fi','Acoustic','RnB Groove','House','Reggaeton','Drill','Afrobeat Groove','EDM Drop','Jazz Swing','Funk Bounce','Chillhop','Dancehall','Dubstep','Techno','Pop Groove','Rock Beat','Ambient Pulse'].map(x=> <option key={x} value={x}>{x}</option>)}
                                 </select>
                               </div>
                               <div>
@@ -1172,7 +1157,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                               <div>
                                 <label className="text-xs text-slate-600">Vocal Type</label>
                                 <select className="mt-1 w-full rounded-lg ring-1 ring-black/10 p-2" value={vocalType} onChange={e=>setVocalType(e.target.value)}>
-                                  {['Male','Female','Robotic','Choir','Cartoonish','AI Voice'].map(x=> <option key={x} value={x}>{x}</option>)}
+                                  {['Male','Female','Child','Androgynous','Deep','Soft','Energetic','Calm','Robotic','Ethereal','Vintage'].map(x=> <option key={x} value={x}>{x}</option>)}
                                 </select>
                               </div>
                               <div>
