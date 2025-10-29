@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { PlaybackState } from '@/lib/types/music';
 import { BsFillPlayFill, BsFillPauseFill, BsFillRewindFill, BsFillFastForwardFill, BsMusicNoteBeamed, BsDownload, BsGear, BsChevronDown } from 'react-icons/bs';
 import { FaStepBackward, FaStepForward } from 'react-icons/fa';
+import { HiOutlineX } from 'react-icons/hi';
 
 interface MusicPlayerProps {
   trackTitle: string;
@@ -39,9 +40,26 @@ const MusicPlayer = ({
   const wavePhaseRef = useRef<number>(0);
 
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isClosed, setIsClosed] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
+
+  // Close behavior: if closed, stop audio and hide UI; reopen when new audio or playback starts
+  useEffect(() => {
+    if (!audioRef.current) return;
+    if (isClosed) {
+      try { audioRef.current.pause(); } catch {}
+      audioRef.current.currentTime = 0;
+    }
+  }, [isClosed]);
+
+  useEffect(() => {
+    // If parent sets a track to play or changes audioUrl while closed, auto-reopen
+    if (isClosed && audioUrl && playbackState !== 'stopped') {
+      setIsClosed(false);
+    }
+  }, [audioUrl, playbackState, isClosed]);
 
   // Sync audio element playback with playbackState
   useEffect(() => {
@@ -246,6 +264,10 @@ const MusicPlayer = ({
 
   const statusText = (trackTitle && trackTitle.trim()) ? trackTitle : (isGenerating ? 'Composing...' : 'Ready');
 
+  if (isClosed) {
+    return null;
+  }
+
   if (isMinimized) {
     return (
       <>
@@ -283,7 +305,7 @@ const MusicPlayer = ({
           <div className="flex items-center gap-4 min-w-0">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 bg-white/10 rounded-md flex items-center justify-center shrink-0 overflow-hidden">
-                <img src="/images/logo.png" alt="App logo" className="w-full h-full object-contain p-1" />
+                <img src="/images/knoteslogo.png" alt="App logo" className="w-full h-full object-contain p-1" />
               </div>
               <div className="truncate">
                 <div className="font-medium text-base truncate">{statusText}</div>
@@ -358,6 +380,9 @@ const MusicPlayer = ({
               aria-label="Download"
             >
               <BsDownload />
+            </button>
+            <button onClick={() => { try { onStop(); } catch {}; setIsClosed(true); }} title="Close Player" aria-label="Close Player" className="p-2 rounded-full hover:bg-white/10 transition-colors">
+              <HiOutlineX />
             </button>
             <button onClick={() => setIsMinimized(true)} title="Hide Player" aria-label="Hide Player" className="p-2 rounded-full hover:bg-white/10 transition-colors">
               <BsChevronDown />
