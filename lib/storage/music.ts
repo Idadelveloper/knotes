@@ -1,6 +1,19 @@
 // Local storage for generated music tracks and playlists.
 // Keeps metadata, favorites, and playlist membership.
 
+export type TrackSettings = {
+  genre?: string;
+  mood?: string; // aka vibe
+  tempoBpm?: number;
+  energy?: string;
+  instruments?: string[];
+  singer?: string;
+  lyricStyle?: string; // 'summary' | 'educational' | 'mix' or custom
+  durationSec?: number;
+  manualTopics?: string;
+  notes?: string; // original study notes context used for generation
+};
+
 export type Track = {
   id: string; // unique
   title: string;
@@ -9,6 +22,7 @@ export type Track = {
   kind: 'background' | 'lyrics';
   audioUrl?: string; // optional if streamed
   lyrics?: string; // for lyrics songs
+  settings?: TrackSettings; // generation settings/metadata
   favorite?: boolean;
 };
 
