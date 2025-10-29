@@ -884,7 +884,7 @@ export default function StudyWorkspace() {
               </div>
               <button
                 className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2 hover:bg-blue-200"
-                onClick={() => pushToast("📝 Generating quiz…")}
+                onClick={() => { pushToast("📝 Generating quiz…"); try { const sid = sessionStorage.getItem('knotes_current_session_id'); if (sid) router.push(`/study/${sid}/quiz`); else router.push(`/study/${routeId || ''}/quiz`); } catch { const sid = typeof window !== 'undefined' ? (sessionStorage.getItem('knotes_current_session_id') || routeId || '') : (routeId || ''); router.push(`/study/${sid}/quiz`); } }}
                 title="Generate Quiz"
               >
                 <FaQuestionCircle /> Generate Quiz
@@ -929,7 +929,7 @@ export default function StudyWorkspace() {
                 </div>
               )}
             </div>
-            <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => pushToast('📝 Generating quiz…')}>
+            <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => { pushToast('📝 Generating quiz…'); try { const sid = sessionStorage.getItem('knotes_current_session_id'); if (sid) router.push(`/study/${sid}/quiz`); else router.push(`/study/${routeId || ''}/quiz`); } catch { const sid = typeof window !== 'undefined' ? (sessionStorage.getItem('knotes_current_session_id') || routeId || '') : (routeId || ''); router.push(`/study/${sid}/quiz`); } }}>
               <FaQuestionCircle /> Generate Quiz
             </button>
           </div>
