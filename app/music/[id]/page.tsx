@@ -164,18 +164,8 @@ export default function MusicPage() {
             setPlaybackState('loading');
             setAudioUrl(undefined);
 
-            // 1) Build description for title
+            // 1) Prepare instruments list
             const instrumentList = Object.keys(instrumentMix).filter((k) => instrumentMix[k]);
-            const desc = `${mood} ${genre} • ${energy} energy ${tempo} BPM${instrumentList.length ? ' • ' + instrumentList.join(', ') : ''}`;
-            try {
-                const { title } = await generateTrackName({ description: desc, context: `Notes title: ${sessionTitle}` });
-                setTrackTitle(title);
-                try { if (id) localStorage.setItem(`knotes_song_title_${Array.isArray(id)?id[0]:id}`, title); } catch {}
-            } catch {
-                const fallbackTitle = `${mood} ${genre}`;
-                setTrackTitle(fallbackTitle);
-                try { if (id) localStorage.setItem(`knotes_song_title_${Array.isArray(id)?id[0]:id}`, fallbackTitle); } catch {}
-            }
             setGenStep(1);
 
             // 2) Generate lyrics (based on entire lecture)
@@ -217,6 +207,31 @@ export default function MusicPage() {
                 });
                 if (lyrics && lyrics.trim()) setLyricsText(lyrics.trim());
             } catch {}
+
+            // Generate track title — prioritize lyrics, then transcript/notes, then settings description
+            try {
+                const instrumentList = Object.keys(instrumentMix).filter((k) => instrumentMix[k]);
+                const settingsDesc = `${mood} ${genre} • ${energy} energy ${Math.round(tempo)} BPM${instrumentList.length ? ' • ' + instrumentList.join(', ') : ''}`;
+                let description = '';
+                if (lyrics && lyrics.trim()) {
+                    // Base title on the actual lyrics
+                    description = `Lyrics for the song (use to derive a concise track title):\n${lyrics.slice(0, 4000)}`;
+                } else if (notes && notes.trim()) {
+                    // Fall back to transcript/notes when no lyrics
+                    description = `Transcript/notes to base the song title on:\n${notes.slice(0, 4000)}`;
+                } else {
+                    // Final fallback: use settings
+                    description = settingsDesc;
+                }
+                const { title } = await generateTrackName({ description, context: `Session: ${sessionTitle}` });
+                setTrackTitle(title);
+                try { if (id) localStorage.setItem(`knotes_song_title_${Array.isArray(id)?id[0]:id}`, title); } catch {}
+            } catch {
+                const fb = `${mood} ${genre}`;
+                setTrackTitle(fb);
+                try { if (id) localStorage.setItem(`knotes_song_title_${Array.isArray(id)?id[0]:id}`, fb); } catch {}
+            }
+
             setGenStep(2);
 
             // Generate topics for "Notes Covered"
@@ -857,9 +872,9 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                     <section className="lg:col-span-1 space-y-4">
                         {/* Song Scope card */}
                         <div className="rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur p-6 shadow-md ring-1 ring-black/5 dark:ring-white/10 transition-transform hover:-translate-y-0.5">
-                            <h2 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent] mb-3">Song Scope</h2>
+                            <h2 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent] mb-1">{sessionTitle || 'Study Upload'}</h2>
                             <div className="flex flex-col gap-2 text-sm">
-                                <div className="text-sm text-slate-700 dark:text-slate-300">Generating based on the entire lecture/upload.</div>
+                                <div className="text-sm text-slate-700 dark:text-slate-300">Generate music based off this entire upload or specify key topic(s)</div>
                             </div>
                         </div>
 

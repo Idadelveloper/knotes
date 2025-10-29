@@ -98,22 +98,8 @@ const MusicGenerator = ({ showLauncher = true, openSettingsSignal }: MusicGenera
         const { title } = await generateTrackName({ description: prompt });
         setTrackTitle(title);
       } catch (err) {
-        console.warn('[MusicGenerator] Writer title failed, falling back:', err);
-        try {
-          if (ai) {
-            const titlePrompt = `Generate a creative, short, instrumental track title for background study music. Description: ${prompt}`;
-            // @ts-ignore
-            const res = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: titlePrompt });
-            // @ts-ignore
-            const text = typeof res.text === 'function' ? res.text() : (res.text || res.candidates?.[0]?.content?.parts?.[0]?.text || 'Generated Track');
-            setTrackTitle(String(text).replace(/"/g, ''));
-          } else {
-            setTrackTitle(`${newSettings.vibe} ${newSettings.genre}`);
-          }
-        } catch (e2) {
-          console.error('Title generation failed (fallback)', e2);
-          setTrackTitle(`${newSettings.vibe} ${newSettings.genre}`);
-        }
+        console.warn('[MusicGenerator] Writer title failed, using local fallback:', err);
+        setTrackTitle(`${newSettings.vibe} ${newSettings.genre}`);
       }
 
     // Start live AI generation via Lyria
