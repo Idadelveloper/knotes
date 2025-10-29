@@ -7,6 +7,7 @@ import { HiOutlineX } from "react-icons/hi";
 import ChatPanel from "@/components/ChatPanel";
 import { useRouter, useParams } from "next/navigation";
 import MusicGenerator from "@/components/music/MusicGenerator";
+import MusicPlayer from "@/components/music/MusicPlayer";
 import { useAuth } from "@/components/AuthProvider";
 import { getGeminiModel } from "@/lib/ai";
 import { translateText } from "@/lib/translate";
@@ -668,37 +669,104 @@ export default function StudyWorkspace() {
     }
   };
 
-  // Voice read controls using Web Speech API
-  const speakAll = () => {
-    const text = getEditorPlainText();
-    if (!text) {
-      pushToast("⚠️ Nothing to read");
-      return;
-    }
+  // Voice read controls using Gemini TTS + MusicPlayer
+  const [voiceTranscript, setVoiceTranscript] = useState<string>("");
+  const [voiceGenerating, setVoiceGenerating] = useState<boolean>(false);
+  const [voiceError, setVoiceError] = useState<string>("");
+  const [voiceAudioUrl, setVoiceAudioUrl] = useState<string | undefined>(undefined);
+  const [voiceDownloadUrl, setVoiceDownloadUrl] = useState<string | undefined>(undefined);
+  const [playerOpen, setPlayerOpen] = useState<boolean>(false);
+  const [playerState, setPlayerState] = useState<"playing" | "paused" | "stopped">("stopped");
+
+  const playInPlayer = (audioUrl: string, title: string) => {
+    setVoiceAudioUrl(audioUrl);
+    setPlayerState("playing");
+    setPlayerOpen(true);
+    pushToast("🔊 Playing audio");
+  };
+
+  async function toBlobUrl(url?: string): Promise<string | undefined> {
+    if (!url) return undefined;
     try {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-        u.rate = 1.0;
-        u.pitch = 1.0;
-        u.onend = () => setTtsSpeaking(false);
-        setTtsSpeaking(true);
-        window.speechSynthesis.speak(u);
-        pushToast("🔊 Reading notes…");
-      } else {
-        pushToast("⚠️ TTS not supported in this browser");
+      if (url.startsWith('data:')) {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        return URL.createObjectURL(blob);
       }
+      return url;
     } catch {
-      pushToast("⚠️ Failed to start TTS");
+      return url;
+    }
+  }
+
+  const startVoiceRead = async () => {
+    const sid = typeof window !== 'undefined' ? sessionStorage.getItem('knotes_current_session_id') : null;
+    const title = typeof window !== 'undefined' ? (sessionStorage.getItem('knotes_title') || 'Study Notes') : 'Study Notes';
+    const rawText = getEditorPlainText();
+    if (!rawText) { pushToast('⚠️ Nothing to read'); return; }
+
+    try {
+      setVoiceError("");
+      setVoiceGenerating(true);
+
+      // 1) If we already have a saved audio track for this session, reuse it
+      const { findTrackBySession, addTrack } = await import('@/lib/storage/music');
+      const existing = sid ? findTrackBySession(sid, 'lyrics') : null;
+      if (existing && existing.audioUrl) {
+        setVoiceTranscript(existing.lyrics || "");
+        const playUrl = await toBlobUrl(existing.audioUrl);
+        setVoiceDownloadUrl(existing.audioUrl);
+        if (playUrl) playInPlayer(playUrl, existing.title || title);
+        setTtsSpeaking(false);
+        return;
+      }
+
+      // 2) Build an audio-friendly transcript (rewrite to filter out non-topic details)
+      const { buildAudioTranscriptPrompt, generateTTS } = await import('@/lib/tts');
+      const prompt = buildAudioTranscriptPrompt(rawText);
+      // We can reuse our general Gemini model to create the transcript text first
+      const { getGeminiModel } = await import('@/lib/ai');
+      const model = getGeminiModel('gemini-2.0-flash');
+      const transcriptRes = await model.generateContent(prompt);
+      let transcript = (transcriptRes?.response?.text?.() as string)?.trim() || '';
+      // If transcript seems empty or too short to be useful, fall back to original notes text
+      if (!transcript || transcript.replace(/\s+/g, '').length < 40) {
+        transcript = rawText;
+      }
+      setVoiceTranscript(transcript);
+
+      // 3) Send transcript to TTS model
+      const tts = await generateTTS(transcript, { voiceName: 'Kore' });
+      // Use Blob URL for playback reliability; save Data URL for persistence/download
+      const playUrl = tts.blobUrl;
+      const downloadUrl = tts.dataUrl;
+
+      // 4) Save as a lyrics Track so it appears in Music and is downloadable
+      const trackTitle = title; // Name audio same as the session title
+      const track = addTrack({
+        id: sid ? `aud_${sid}` : undefined,
+        title: trackTitle,
+        kind: 'lyrics',
+        audioUrl: downloadUrl,
+        lyrics: transcript,
+        sessionId: sid || undefined,
+      } as any);
+      // Persisted via addTrack; ensure index updated
+
+      setVoiceDownloadUrl(downloadUrl);
+      playInPlayer(playUrl, trackTitle);
+      setTtsSpeaking(false);
+    } catch (e: any) {
+      console.warn('[VoiceRead] Failed:', e);
+      setVoiceError(e?.message || 'Failed to generate audio');
+      pushToast('⚠️ Failed to generate audio');
+    } finally {
+      setVoiceGenerating(false);
     }
   };
-  const stopSpeak = () => {
-    try {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-        setTtsSpeaking(false);
-      }
-    } catch {}
+
+  const stopVoice = () => {
+    setPlayerState('stopped');
   };
 
   // Auto-run settings on tab switch (no auto-summarize; require explicit click)
@@ -714,7 +782,27 @@ export default function StudyWorkspace() {
         }
       })();
     }
-    if (notesTab !== 'voice') stopSpeak();
+    if (notesTab !== 'voice') {
+      setPlayerState('stopped');
+    } else {
+      // Preload any existing generated audio/transcript for this session
+      (async () => {
+        try {
+          const sid = typeof window !== 'undefined' ? sessionStorage.getItem('knotes_current_session_id') : null;
+          if (!sid) return;
+          const { findTrackBySession } = await import('@/lib/storage/music');
+          const existing = findTrackBySession(sid, 'lyrics');
+          if (existing) {
+            if (existing.lyrics) setVoiceTranscript(existing.lyrics);
+            if (existing.audioUrl) {
+              setVoiceDownloadUrl(existing.audioUrl);
+              const playUrl = await toBlobUrl(existing.audioUrl);
+              if (playUrl) setVoiceAudioUrl(playUrl);
+            }
+          }
+        } catch {}
+      })();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notesTab]);
 
@@ -1227,13 +1315,35 @@ export default function StudyWorkspace() {
 
               {notesTab === 'voice' && (
                 <div className="rounded-xl border border-gray-200 p-4 bg-white/70">
-                  <p className="text-slate-700">Use Voice Read to listen to your entire notes content. This uses your browser's built-in text-to-speech.</p>
-                  <div className="mt-3 flex items-center gap-2">
-                    {!ttsSpeaking ? (
-                      <button className="rounded-full bg-primary px-4 py-2 text-slate-900" onClick={speakAll}>Start Reading</button>
-                    ) : (
-                      <button className="rounded-full bg-red-500 px-4 py-2 text-white" onClick={stopSpeak}>Stop</button>
-                    )}
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1">
+                      <p className="text-slate-700">Generate an audio-friendly transcript and listen to it. We'll filter out logistics like attendance and instructor details, focusing on the main topic.</p>
+                      {voiceTranscript ? (
+                        <div className="mt-3 max-h-64 overflow-auto rounded-lg bg-white ring-1 ring-black/10 p-3 whitespace-pre-wrap text-slate-800 text-sm">
+                          {voiceTranscript}
+                        </div>
+                      ) : (
+                        <div className="mt-3 text-sm text-slate-500">Transcript will appear here after generation.</div>
+                      )}
+                      {voiceError && (
+                        <div className="mt-2 text-sm text-red-600">{voiceError}</div>
+                      )}
+                      <div className="mt-3 flex items-center gap-2">
+                        <button className="rounded-full bg-primary px-4 py-2 text-slate-900 disabled:opacity-50" onClick={startVoiceRead} disabled={voiceGenerating}>
+                          {voiceGenerating ? 'Generating…' : (voiceAudioUrl ? 'Play Audio' : 'Start Reading')}
+                        </button>
+                        {voiceAudioUrl && (
+                          <button className="rounded-full bg-white ring-1 ring-black/10 px-4 py-2 text-slate-800" onClick={() => playInPlayer(voiceAudioUrl!, (typeof window !== 'undefined' ? (sessionStorage.getItem('knotes_title') || 'Study Notes') : 'Study Notes'))}>
+                            Play Again
+                          </button>
+                        )}
+                        {(voiceDownloadUrl || voiceAudioUrl) && (
+                          <a className="rounded-full bg-white ring-1 ring-black/10 px-4 py-2 text-slate-800" href={(voiceDownloadUrl || voiceAudioUrl)!} download={(typeof window !== 'undefined' ? (sessionStorage.getItem('knotes_title') || 'audio') : 'audio') + ((voiceDownloadUrl || voiceAudioUrl)?.startsWith('data:audio/mpeg') ? '.mp3' : '.wav')}>
+                            Download Audio
+                          </a>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1242,6 +1352,36 @@ export default function StudyWorkspace() {
           </div>
         </div>
       </div>
+
+      {/* Inline Music Player for Voice Read */}
+      {playerOpen && (
+        <div className="fixed bottom-0 left-0 right-0 z-40">
+          <div className="mx-auto w-full max-w-5xl px-3 pb-2">
+            <MusicPlayer
+              trackTitle={(typeof window !== 'undefined' ? (sessionStorage.getItem('knotes_title') || 'Audio Notes') : 'Audio Notes')}
+              playbackState={playerState as any}
+              isGenerating={voiceGenerating}
+              audioUrl={voiceAudioUrl}
+              onPlayPause={() => setPlayerState((s) => (s === 'playing' ? 'paused' : 'playing'))}
+              onStop={() => { setPlayerState('stopped'); }}
+              onTweakSettings={() => { /* no-op for voice */ }}
+              onRegenerate={() => { /* no-op for voice */ }}
+              onDownload={() => {
+                try {
+                  const url = voiceDownloadUrl || voiceAudioUrl;
+                  if (!url) return;
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = ((typeof window !== 'undefined' ? (sessionStorage.getItem('knotes_title') || 'audio') : 'audio') + (url?.startsWith('data:audio/mpeg') ? '.mp3' : '.wav'));
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                } catch {}
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Floating Chat FAB */}
       <button

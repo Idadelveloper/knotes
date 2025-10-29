@@ -44,12 +44,33 @@ function safeParse<T>(val: string | null, fallback: T): T {
 
 function saveIndex(key: string, arr: any[]) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(key, JSON.stringify(arr));
+  try {
+    localStorage.setItem(key, JSON.stringify(arr));
+  } catch (e) {
+    try { console.warn('[storage] Failed to save index', key, e); } catch {}
+    // Best-effort: drop oldest half and retry once
+    try {
+      if (Array.isArray(arr) && arr.length > 1) {
+        const trimmed = arr.slice(0, Math.ceil(arr.length / 2));
+        localStorage.setItem(key, JSON.stringify(trimmed));
+      }
+    } catch {}
+  }
 }
 
 export function listTracks(): Pick<Track, 'id' | 'title' | 'createdAt' | 'favorite' | 'kind'>[] {
   if (typeof window === 'undefined') return [];
   return safeParse(localStorage.getItem(TRACKS_KEY), [] as any[]);
+}
+
+export function findTrackBySession(sessionId: string, kind?: Track['kind']): Track | null {
+  if (typeof window === 'undefined') return null;
+  const idx = listTracks();
+  for (const m of idx) {
+    const full = getTrack(m.id);
+    if (full && full.sessionId === sessionId && (!kind || full.kind === kind)) return full;
+  }
+  return null;
 }
 
 export function getTrack(id: string): Track | null {
@@ -59,7 +80,18 @@ export function getTrack(id: string): Track | null {
 
 export function saveTrack(t: Track) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(TRACK_PREFIX + t.id, JSON.stringify(t));
+  // Try to persist full track; if quota exceeded (large data URLs), drop audioUrl and retry
+  try {
+    localStorage.setItem(TRACK_PREFIX + t.id, JSON.stringify(t));
+  } catch (e) {
+    try {
+      const { audioUrl, ...rest } = t as any;
+      localStorage.setItem(TRACK_PREFIX + t.id, JSON.stringify(rest));
+      try { console.warn('[storage] Track audio too large to persist; saved metadata without audio', t.id); } catch {}
+    } catch (e2) {
+      try { console.warn('[storage] Failed to save track payload', t.id, e2); } catch {}
+    }
+  }
   const idx = listTracks();
   const filtered = idx.filter((x) => x.id !== t.id);
   const minimal = { id: t.id, title: t.title, createdAt: t.createdAt, favorite: !!t.favorite, kind: t.kind };

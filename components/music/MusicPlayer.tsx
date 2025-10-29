@@ -61,6 +61,36 @@ const MusicPlayer = ({
     }
   }, [audioUrl, playbackState, isClosed]);
 
+  // When audioUrl changes, force reload and wire readiness/error events
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (!audioUrl) return;
+    try {
+      // Reset timers and duration until metadata arrives
+      setElapsedTime(0);
+      setDuration(0);
+      audio.volume = volume;
+      const onCanPlay = () => {
+        // If parent wants to play, start once ready
+        if (!isGenerating && playbackState === 'playing') {
+          audio.play().catch(() => {});
+        }
+      };
+      const onError = (e: any) => {
+        try { console.warn('[MusicPlayer] Audio error for source', audioUrl, e); } catch {}
+      };
+      audio.addEventListener('canplaythrough', onCanPlay);
+      audio.addEventListener('error', onError);
+      // Force the browser to (re)load the media element for new URL
+      audio.load();
+      return () => {
+        audio.removeEventListener('canplaythrough', onCanPlay);
+        audio.removeEventListener('error', onError);
+      };
+    } catch {}
+  }, [audioUrl]);
+
   // Sync audio element playback with playbackState
   useEffect(() => {
     const audio = audioRef.current;
@@ -273,7 +303,7 @@ const MusicPlayer = ({
       <>
         {/* Keep the audio element mounted so playback continues in background */}
         {audioUrl && (
-          <audio ref={audioRef} src={audioUrl} preload="auto" />
+          <audio ref={audioRef} src={audioUrl} preload="auto" playsInline />
         )}
         <button
           onClick={() => setIsMinimized(false)}
@@ -293,7 +323,7 @@ const MusicPlayer = ({
     <>
       {/* Hidden/inline audio element that actually plays the track */}
       {audioUrl && (
-        <audio ref={audioRef} src={audioUrl} preload="auto" />
+        <audio ref={audioRef} src={audioUrl} preload="auto" playsInline />
       )}
 
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[clamp(320px,90vw,900px)] bg-white/20 backdrop-blur-md rounded-xl border border-white/10 shadow-2xl flex flex-col overflow-hidden">
