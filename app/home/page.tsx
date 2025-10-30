@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { FaCloudUploadAlt, FaInfoCircle, FaClock, FaMusic } from "react-icons/fa";
+import { FaBookOpen, FaPenNib } from "react-icons/fa6";
 import { HiOutlineX } from "react-icons/hi";
 import { extractTextFromFile } from "@/lib/ai";
 import { rewriteText, generateTitle } from "@/lib/rewriter";
@@ -95,7 +96,7 @@ export default function HomePage() {
 
   const StatCard = ({ label, value }: { label: string; value: string | number }) => (
     <div className="rounded-2xl ring-1 ring-black/5 dark:ring-white/10 bg-white/70 dark:bg-white/5 p-4 flex flex-col gap-1">
-      <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</div>
+      <div className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-500">{label}</div>
       <div className="text-2xl font-semibold text-slate-900 dark:text-[--color-accent]">{value}</div>
     </div>
   );
@@ -109,32 +110,63 @@ export default function HomePage() {
   }
 
   return (
-    <main className="relative w-full min-h-screen">
+    <main className="relative w-full min-h-screen overflow-hidden">
+      {/* Decorative background gradients and icons (match landing) */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(50% 50% at 0% 0%, rgba(139,198,236,0.35) 0%, rgba(139,198,236,0.08) 55%, rgba(139,198,236,0.03) 100%), " +
+              "radial-gradient(55% 55% at 100% 100%, rgba(179,255,171,0.35) 0%, rgba(179,255,171,0.08) 55%, rgba(179,255,171,0.02) 100%)",
+          }}
+        />
+        {/* Scattered study/music icons */}
+        <div className="absolute inset-0">
+          <span className="absolute left-[8%] top-[18%] text-primary/25"><FaMusic size={28} /></span>
+          <span className="absolute left-[22%] top-[40%] text-primary/20"><FaBookOpen size={32} /></span>
+          <span className="absolute left-[12%] bottom-[22%] text-primary/15"><FaPenNib size={26} /></span>
+
+          <span className="absolute right-[10%] top-[22%] text-primary/20"><FaBookOpen size={30} /></span>
+          <span className="absolute right-[20%] top-[38%] text-primary/25"><FaMusic size={34} /></span>
+          <span className="absolute right-[14%] bottom-[18%] text-primary/15"><FaPenNib size={28} /></span>
+
+          <span className="absolute left-1/2 top-[12%] -translate-x-1/2 text-primary/15"><FaMusic size={40} /></span>
+          <span className="absolute left-1/2 bottom-[12%] -translate-x-1/2 text-primary/15"><FaBookOpen size={36} /></span>
+        </div>
+      </div>
       {/* Page container */}
       <div className="mx-auto w-full max-w-6xl px-5 pt-20 pb-24">
         {/* Header: Greeting + Primary Action */}
         <section className="mb-10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-semibold text-slate-900 dark:text-[--color-accent]">
+              <h1 className="text-4xl sm:text-5xl font-semibold leading-tight tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400">
                 Hello, {displayName.split("@")[0]}
               </h1>
-              <p className="mt-2 text-slate-700 dark:text-slate-300">
-                Welcome back. Here’s a quick look at your study activity.
+              <p className="mt-2 max-w-2xl text-slate-800 dark:text-slate-600">
+                Your AI study hub — organize notes, generate focus music, and quiz yourself, all in one place.
               </p>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 text-slate-900 font-medium shadow-[0_6px_0_rgba(0,0,0,0.08)] hover:shadow-[0_8px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-slate-900 font-medium shadow-[0_6px_0_rgba(0,0,0,0.08)] hover:shadow-[0_8px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px"
                 title="Upload a file or paste your notes to begin."
                 aria-describedby="upload-help"
               >
-                📄 Upload/Paste Notes
+                <FaCloudUploadAlt aria-hidden />
+                <span>Start with Notes</span>
               </button>
+              <Link
+                href="/music"
+                className="inline-flex items-center justify-center rounded-full bg-secondary px-6 py-3 font-medium text-slate-900 shadow-[0_6px_0_rgba(0,0,0,0.08)] hover:shadow-[0_8px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px"
+              >
+                Explore Music
+              </Link>
             </div>
           </div>
-          <p id="upload-help" className="mt-3 max-w-2xl text-sm sm:text-base text-slate-600 dark:text-slate-300">
+          <p id="upload-help" className="mt-3 max-w-2xl text-sm sm:text-base text-slate-700 dark:text-slate-500">
             Drag & drop a .txt, .pdf, or .docx file — or paste your notes. We’ll generate a personalized, focus-friendly soundtrack for your study session.
           </p>
         </section>
@@ -155,7 +187,7 @@ export default function HomePage() {
               Recent Study Sessions
             </h2>
             {recents.length === 0 ? (
-              <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-sm p-8 text-center text-slate-700 dark:text-slate-300">
+              <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-sm p-8 text-center text-slate-700 dark:text-slate-500">
                 <p className="flex items-center justify-center gap-2 text-base md:text-lg">
                   <FaClock className="text-primary" />
                   No study sessions yet. Start by uploading your first notes!
@@ -167,13 +199,27 @@ export default function HomePage() {
                   <li key={s.id} className="rounded-xl ring-1 ring-black/5 dark:ring-white/10 bg-white/70 dark:bg-white/5 p-4 hover:ring-primary/60 transition">
                     {s.href ? (
                       <Link href={s.href} className="block">
-                        <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{s.title}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">{new Date(s.openedAt).toLocaleString()}</div>
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary ring-1 ring-primary/30">
+                            <FaClock size={14} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{s.title}</div>
+                            <div className="mt-1 inline-block text-xs px-2 py-1 rounded-full bg-[--color-accent]/80 dark:bg-white/10 ring-1 ring-black/5 dark:ring-white/10 text-slate-700 dark:text-slate-200">{new Date(s.openedAt).toLocaleString()}</div>
+                          </div>
+                        </div>
                       </Link>
                     ) : (
                       <div className="block">
-                        <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{s.title}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">{new Date(s.openedAt).toLocaleString()}</div>
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary ring-1 ring-primary/30">
+                            <FaClock size={14} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{s.title}</div>
+                            <div className="mt-1 inline-block text-xs px-2 py-1 rounded-full bg-[--color-accent]/80 dark:bg-white/10 ring-1 ring-black/5 dark:ring-white/10 text-slate-700 dark:text-slate-200">{new Date(s.openedAt).toLocaleString()}</div>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </li>
@@ -188,7 +234,7 @@ export default function HomePage() {
               Recently Played
             </h2>
             {tracks.length === 0 ? (
-              <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-sm p-8 text-center text-slate-700 dark:text-slate-300">
+              <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-sm p-8 text-center text-slate-700 dark:text-slate-500">
                 <p className="flex items-center justify-center gap-2 text-base md:text-lg">
                   <FaMusic className="text-primary" />
                   No music played yet. Generate background sound from your study space!
@@ -200,13 +246,27 @@ export default function HomePage() {
                   <li key={t.id} className="rounded-xl ring-1 ring-black/5 dark:ring-white/10 bg-white/70 dark:bg-white/5 p-4 hover:ring-primary/60 transition">
                     {t.href ? (
                       <Link href={t.href} className="block">
-                        <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{t.title}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">{new Date(t.playedAt).toLocaleString()}</div>
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-secondary/30 text-slate-900 ring-1 ring-secondary/50">
+                            <FaMusic size={14} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{t.title}</div>
+                            <div className="mt-1 inline-block text-xs px-2 py-1 rounded-full bg-[--color-accent]/80 dark:bg-white/10 ring-1 ring-black/5 dark:ring-white/10 text-slate-700 dark:text-slate-200">{new Date(t.playedAt).toLocaleString()}</div>
+                          </div>
+                        </div>
                       </Link>
                     ) : (
                       <div className="block">
-                        <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{t.title}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">{new Date(t.playedAt).toLocaleString()}</div>
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-secondary/30 text-slate-900 ring-1 ring-secondary/50">
+                            <FaMusic size={14} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{t.title}</div>
+                            <div className="mt-1 inline-block text-xs px-2 py-1 rounded-full bg-[--color-accent]/80 dark:bg-white/10 ring-1 ring-black/5 dark:ring-white/10 text-slate-700 dark:text-slate-200">{new Date(t.playedAt).toLocaleString()}</div>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </li>
@@ -265,8 +325,8 @@ export default function HomePage() {
                 <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary ring-1 ring-primary/30">
                   <FaCloudUploadAlt size={22} />
                 </div>
-                <p className="mt-3 font-medium text-slate-900 dark:text-[--color-accent]">Drag & drop your file here</p>
-                <p className="text-sm text-slate-600 dark:text-slate-300">.txt, .pdf, .docx</p>
+                <p className="mt-3 font-medium text-slate-900 ">Drag & drop your file here</p>
+                <p className="text-sm text-slate-600 ">.txt, .pdf, .docx</p>
                 <div className="mt-4">
                   <button
                     onClick={triggerFile}
