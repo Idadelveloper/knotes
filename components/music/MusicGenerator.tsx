@@ -112,7 +112,7 @@ const MusicGenerator = ({ showLauncher = true, openSettingsSignal }: MusicGenera
         let href: string | undefined = undefined;
         try {
           const sid = sessionStorage.getItem('knotes_current_session_id');
-          href = sid ? `/music/${sid}` : '/library?intent=music';
+          href = sid ? `/music/${sid}` : '/music';
         } catch {}
         addRecentTrack({ id: `${Date.now()}:${t}`, title: t, playedAt: new Date().toISOString(), href });
       } catch {}
