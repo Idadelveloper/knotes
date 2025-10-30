@@ -137,9 +137,8 @@ const MusicPlayer = ({
       setElapsedTime(0);
       // Prefer advancing to next track if available; otherwise stop
       try {
-        // @ts-expect-error optional callbacks exist on props
-        if (typeof (onNext as any) === 'function') {
-          (onNext as any)();
+        if (typeof onNext === 'function') {
+          onNext();
         } else {
           onStop();
         }

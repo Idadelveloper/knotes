@@ -54,7 +54,7 @@ export async function composeSongDetailed(opts: ElevenComposeOptions): Promise<E
       musicLengthMs,
       modelId,
       forceInstrumental,
-    }, { output_format: outputFormat });
+    });
 
     // resp.audio is Uint8Array or ArrayBuffer per SDK
     const audioBytes: any = resp?.audio ?? resp?.audioData ?? resp?.audioBytes;

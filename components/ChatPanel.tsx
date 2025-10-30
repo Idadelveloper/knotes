@@ -86,6 +86,7 @@ export default function ChatPanel({
                       sentTime: m.sentTime || "",
                       sender,
                       direction,
+                      position: "single",
                     }}
                   >
                     {direction === "incoming" ? (
