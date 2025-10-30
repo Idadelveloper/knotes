@@ -1,0 +1,59 @@
+# Firebase App Hosting configuration for Knotes
+# See: https://firebase.google.com/docs/hosting/app-hosting
+
+# Cloud Run runtime settings (defaults are usually fine; adjust as needed)
+# runConfig:
+#   minInstances: 0
+#   maxInstances: 100
+#   concurrency: 80
+#   cpu: 1
+#   memoryMiB: 512
+
+# Environment variables and secrets
+# Use `firebase apphosting:secrets:set <SECRET_NAME>` to create secrets
+# Then reference them below under `secret:`. All NEXT_PUBLIC_* vars are safe
+# for the client and required by our Next.js app at both build and runtime.
+env:
+  # Firebase Web app config
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    secret: FIREBASE_API_KEY
+    availability: [BUILD, RUNTIME]
+
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    secret: FIREBASE_AUTH_DOMAIN
+    availability: [BUILD, RUNTIME]
+
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    secret: FIREBASE_PROJECT_ID
+    availability: [BUILD, RUNTIME]
+
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    secret: FIREBASE_STORAGE_BUCKET
+    availability: [BUILD, RUNTIME]
+
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    secret: FIREBASE_MESSAGING_SENDER_ID
+    availability: [BUILD, RUNTIME]
+
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    secret: FIREBASE_APP_ID
+    availability: [BUILD, RUNTIME]
+
+  # AI keys used by the app
+  - variable: NEXT_PUBLIC_GOOGLE_API_KEY
+    secret: GOOGLE_API_KEY
+    availability: [BUILD, RUNTIME]
+
+  - variable: NEXT_PUBLIC_ELEVENLABS_API_KEY
+    secret: ELEVENLABS_API_KEY
+    availability: [BUILD, RUNTIME]
+
+# If you want to override default build/run commands, uncomment below
+# scripts:
+#   buildCommand: npm run build
+#   runCommand: npm run start
+
+# Control which files are deployed from the repository (optional)
+# outputFiles:
+#   serverApp:
+#     include: [.]  # keep all files (default framework optimizations still apply)
