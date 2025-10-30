@@ -305,124 +305,128 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* Body: two vertical sections */}
-            <div className="px-6 py-5 space-y-4">
+            {/* Body: two clearly separated sections */}
+            <div className="px-6 py-5">
               {uploadError && (
-                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">{uploadError}</div>
+                <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">{uploadError}</div>
               )}
-              {/* Drag & drop upload */}
-              <div
-                className={`group relative rounded-2xl bg-white/80 dark:bg-white/5 p-5 ring-1 ring-black/10 dark:ring-white/10 text-center transition ${
-                  isDragging ? "ring-2 ring-primary shadow-[0_0_0_4px_rgba(139,198,236,0.25)]" : ""
-                }`}
-                onDrop={onDrop}
-                onDragOver={onDragOver}
-                onDragLeave={onDragLeave}
-                role="region"
-                aria-label="Upload notes dropzone"
-                title="Drag & drop notes here or browse files"
-              >
-                <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary ring-1 ring-primary/30">
-                  <FaCloudUploadAlt size={22} />
-                </div>
-                <p className="mt-3 font-medium text-slate-900 ">Drag & drop your file here</p>
-                <p className="text-sm text-slate-600 ">.txt, .pdf, .docx</p>
-                <div className="mt-4">
-                  <button
-                    onClick={triggerFile}
-                    className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-2 text-slate-900 font-medium shadow-[0_4px_0_rgba(0,0,0,0.08)] hover:shadow-[0_6px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px"
-                  >
-                    Browse Files
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".txt,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const files = e.target.files;
-                      if (files && files.length) {
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* File Upload */}
+                <section
+                  className={`group relative rounded-2xl bg-white/85 dark:bg-white/5 p-5 ring-1 ring-black/10 dark:ring-white/10 transition ${
+                    isDragging ? "ring-2 ring-primary shadow-[0_0_0_4px_rgba(139,198,236,0.25)]" : ""
+                  }`}
+                  onDrop={onDrop}
+                  onDragOver={onDragOver}
+                  onDragLeave={onDragLeave}
+                  role="region"
+                  aria-label="File upload section"
+                  title="Drag & drop a file here or browse files"
+                >
+                  <h4 className="text-sm font-semibold text-slate-900 dark:text-[--color-accent] mb-2">File upload</h4>
+                  <div className="text-center">
+                    <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary ring-1 ring-primary/30">
+                      <FaCloudUploadAlt size={22} />
+                    </div>
+                    <p className="mt-3 font-medium text-slate-900">Drag & drop your file</p>
+                    <p className="text-xs text-slate-600">.txt, .pdf, .docx</p>
+                    <div className="mt-4">
+                      <button
+                        onClick={triggerFile}
+                        className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-2 text-slate-900 font-medium shadow-[0_4px_0_rgba(0,0,0,0.08)] hover:shadow-[0_6px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px"
+                      >
+                        Browse Files
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".txt,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const files = e.target.files;
+                          if (files && files.length) {
+                            setUploadError(null);
+                            try {
+                              setUploading(true);
+                              const text = await extractTextFromFile(files[0]);
+                              if (text && text.trim().length > 0) {
+                                const { text: structured, used } = await rewriteText(text.trim());
+                                const { title } = await generateTitle(text.trim());
+                                const sess = createSession(title || "Study Notes", text.trim(), (structured || text).trim());
+                                addRecentSession({ id: sess.id, title: sess.title, openedAt: new Date().toISOString(), href: `/study/${sess.id}` });
+                                try { sessionStorage.setItem("knotes_current_session_id", sess.id); } catch {}
+                                try { incStat('uploads', 1); setStatsState(getStats()); } catch {}
+                                setIsModalOpen(false);
+                                window.location.href = `/study/${sess.id}`;
+                              } else {
+                                throw new Error("No text could be extracted from the document.");
+                              }
+                            } catch (err: any) {
+                              console.error(err);
+                              setUploadError(err?.message || "Failed to analyze the document.");
+                            } finally {
+                              setUploading(false);
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="mt-2 inline-flex items-center gap-2 justify-center text-xs text-slate-500 dark:text-slate-400">
+                      <FaInfoCircle aria-hidden />
+                      <span>We process locally when possible for privacy.</span>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Paste Notes */}
+                <section className="rounded-2xl bg-white/85 dark:bg-white/5 p-5 ring-1 ring-black/10 dark:ring-white/10">
+                  <h4 className="text-sm font-semibold text-slate-900 dark:text-[--color-accent] mb-2">Paste notes</h4>
+                  <label htmlFor="notes" className="sr-only">Paste your notes</label>
+                  <textarea
+                    id="notes"
+                    rows={10}
+                    value={notesText}
+                    onChange={(e) => setNotesText(e.target.value)}
+                    className="w-full resize-y rounded-xl bg-white/80 dark:bg-white/5 text-slate-900 dark:text-[--color-accent] placeholder:text-slate-500 dark:placeholder:text-slate-400 p-3 ring-1 ring-black/10 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Paste your notes or write here…"
+                    aria-label="Paste notes textarea"
+                  />
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      disabled={uploading}
+                      className="inline-flex items-center justify-center rounded-full bg-secondary px-5 py-2 text-slate-900 font-medium shadow-[0_4px_0_rgba(0,0,0,0.08)] hover:shadow-[0_6px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px disabled:opacity-60"
+                      onClick={async () => {
                         setUploadError(null);
+                        const text = notesText.trim();
+                        if (text.length === 0) {
+                          setUploadError("Please paste some notes or upload a file.");
+                          return;
+                        }
                         try {
                           setUploading(true);
-                          const text = await extractTextFromFile(files[0]);
-                          if (text && text.trim().length > 0) {
-                            const { text: structured, used } = await rewriteText(text.trim());
-                            const { title } = await generateTitle(text.trim());
-                            // Create persistent session with original+structured notes
-                            const sess = createSession(title || "Study Notes", text.trim(), (structured || text).trim());
-                            // Update recents with direct link
-                            addRecentSession({ id: sess.id, title: sess.title, openedAt: new Date().toISOString(), href: `/study/${sess.id}` });
-                            try { sessionStorage.setItem("knotes_current_session_id", sess.id); } catch {}
-                            try { incStat('uploads', 1); setStatsState(getStats()); } catch {}
-                            setIsModalOpen(false);
-                            window.location.href = `/study/${sess.id}`;
-                          } else {
-                            throw new Error("No text could be extracted from the document.");
-                          }
+                          const { text: structured, used } = await rewriteText(text);
+                          const { title } = await generateTitle(text);
+                          const sess = createSession(title || "Study Notes", text, (structured || text).trim());
+                          addRecentSession({ id: sess.id, title: sess.title, openedAt: new Date().toISOString(), href: `/study/${sess.id}` });
+                          try { sessionStorage.setItem("knotes_current_session_id", sess.id); } catch {}
+                          console.log(`[Home] Structured pasted notes via ${used}. Redirecting to /study/${sess.id}.`);
+                          setIsModalOpen(false);
+                          window.location.href = `/study/${sess.id}`;
                         } catch (err: any) {
                           console.error(err);
-                          setUploadError(err?.message || "Failed to analyze the document.");
+                          setUploadError(err?.message || "Failed to process notes.");
                         } finally {
                           setUploading(false);
                         }
-                      }
-                    }}
-                  />
-                </div>
-                <div className="mt-2 inline-flex items-center gap-2 justify-center text-xs text-slate-500 dark:text-slate-400">
-                  <FaInfoCircle aria-hidden />
-                  <span>We process locally when possible for privacy.</span>
-                </div>
-              </div>
-
-              {/* Paste textarea */}
-              <div>
-                <label htmlFor="notes" className="sr-only">Paste your notes</label>
-                <textarea
-                  id="notes"
-                  rows={8}
-                  value={notesText}
-                  onChange={(e) => setNotesText(e.target.value)}
-                  className="w-full resize-y rounded-2xl bg-white/80 dark:bg-white/5 text-slate-900 dark:text-[--color-accent] placeholder:text-slate-500 dark:placeholder:text-slate-400 p-4 ring-1 ring-black/10 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Paste your notes or write here…"
-                />
+                      }}
+                    >
+                      {uploading ? "Processing…" : "Start Studying"}
+                    </button>
+                  </div>
+                </section>
               </div>
             </div>
 
-            {/* Footer actions */}
-            <div className="px-6 pb-6">
-              <button
-                disabled={uploading}
-                className="w-full inline-flex items-center justify-center rounded-full bg-secondary px-6 py-3 text-slate-900 font-medium shadow-[0_6px_0_rgba(0,0,0,0.08)] hover:shadow-[0_8px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px disabled:opacity-60"
-                onClick={async () => {
-                  setUploadError(null);
-                  const text = notesText.trim();
-                  if (text.length === 0) {
-                    setUploadError("Please paste some notes or upload a file.");
-                    return;
-                  }
-                  try {
-                    setUploading(true);
-                    const { text: structured, used } = await rewriteText(text);
-                    const { title } = await generateTitle(text);
-                    const sess = createSession(title || "Study Notes", text, (structured || text).trim());
-                    addRecentSession({ id: sess.id, title: sess.title, openedAt: new Date().toISOString(), href: `/study/${sess.id}` });
-                    try { sessionStorage.setItem("knotes_current_session_id", sess.id); } catch {}
-                    console.log(`[Home] Structured pasted notes via ${used}. Redirecting to /study/${sess.id}.`);
-                    setIsModalOpen(false);
-                    window.location.href = `/study/${sess.id}`;
-                  } catch (err: any) {
-                    console.error(err);
-                    setUploadError(err?.message || "Failed to process notes.");
-                  } finally {
-                    setUploading(false);
-                  }
-                }}
-              >
-                {uploading ? "Processing…" : "Start Studying"}
-              </button>
-            </div>
           </div>
         </div>
       )}

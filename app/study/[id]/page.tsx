@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FaPlay, FaPause, FaStepForward, FaStepBackward, FaVolumeUp, FaSearch, FaBrain, FaGlobe, FaPenFancy, FaCopy, FaChevronDown, FaChevronRight, FaDownload, FaMagic, FaVolumeUp as FaVolume, FaCloudUploadAlt, FaMusic, FaChartBar, FaQuestionCircle, FaClock, FaComments } from "react-icons/fa";
 import HighlightToolbar from "@/components/HighlightToolbar";
 import { HiOutlineX } from "react-icons/hi";
+import { FaBookOpen, FaPenNib } from "react-icons/fa6";
 import ChatPanel from "@/components/ChatPanel";
 import { useRouter, useParams } from "next/navigation";
 import MusicGenerator from "@/components/music/MusicGenerator";
@@ -815,6 +816,19 @@ export default function StudyWorkspace() {
             "radial-gradient(50% 50% at 0% 0%, rgba(139,198,236,0.35) 0%, rgba(139,198,236,0.08) 55%, rgba(139,198,236,0.03) 100%), " +
             "radial-gradient(55% 55% at 100% 100%, rgba(179,255,171,0.35) 0%, rgba(179,255,171,0.08) 55%, rgba(179,255,171,0.02) 100%)"
         }} />
+        {/* Scattered study/music icons */}
+        <div className="absolute inset-0">
+          <span className="absolute left-[8%] top-[18%] text-primary/25"><FaMusic size={28} /></span>
+          <span className="absolute left-[22%] top-[40%] text-primary/20"><FaBookOpen size={32} /></span>
+          <span className="absolute left-[12%] bottom-[22%] text-primary/15"><FaPenNib size={26} /></span>
+
+          <span className="absolute right-[10%] top-[22%] text-primary/20"><FaBookOpen size={30} /></span>
+          <span className="absolute right-[20%] top-[38%] text-primary/25"><FaMusic size={34} /></span>
+          <span className="absolute right-[14%] bottom-[18%] text-primary/15"><FaPenNib size={28} /></span>
+
+          <span className="absolute left-1/2 top-[12%] -translate-x-1/2 text-primary/15"><FaMusic size={40} /></span>
+          <span className="absolute left-1/2 bottom-[12%] -translate-x-1/2 text-primary/15"><FaBookOpen size={36} /></span>
+        </div>
       </div>
 
       {/* Header Bar */}
@@ -958,7 +972,7 @@ export default function StudyWorkspace() {
             {/* Notes Panel with Tabs */}
             <section>
               <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-xl font-semibold text-slate-900">{notesTitle}</h2>
+                <h2 className="text-xl sm:text-2xl font-semibold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400">{notesTitle}</h2>
                 <div className="inline-flex rounded-full bg-white/60 ring-1 ring-black/10 p-1">
                   <TabBtn active={notesTab === 'original'} onClick={() => setNotesTab('original')}>Original</TabBtn>
                   <TabBtn active={notesTab === 'summarize'} onClick={() => setNotesTab('summarize')}>Summarize</TabBtn>
