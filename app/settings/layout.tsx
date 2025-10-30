@@ -1,4 +1,3 @@
-import Sidebar from "@/components/Sidebar";
 import "../globals.css";
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
@@ -16,9 +15,8 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         />
       </div>
 
-      {/* Sidebar and main content */}
-      <Sidebar />
-      <main className="pt-16 md:pt-16 ml-64 p-6 md:p-8">
+      {/* Main content (no sidebar) */}
+      <main className="pt-16 md:pt-16 p-6 md:p-8">
         <div className="mx-auto w-full max-w-5xl">{children}</div>
       </main>
     </div>

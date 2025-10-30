@@ -14,6 +14,7 @@ import {
     FaHeadphones,
     FaRegLightbulb,
 } from "react-icons/fa";
+import { FaBookOpen, FaPenNib } from "react-icons/fa6";
 import { HiOutlineX } from "react-icons/hi";
 import MusicPlayer from "@/components/music/MusicPlayer";
 import PlaylistModal from "@/components/music/PlaylistModal";
@@ -830,6 +831,19 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
                             "radial-gradient(55% 55% at 100% 100%, rgba(179,255,171,0.35) 0%, rgba(179,255,171,0.08) 55%, rgba(179,255,171,0.02) 100%)",
                     }}
                 />
+                {/* Scattered study/music icons */}
+                <div className="absolute inset-0">
+                  <span className="absolute left-[8%] top-[18%] text-primary/25"><FaMusic size={28} /></span>
+                  <span className="absolute left-[22%] top-[40%] text-primary/20"><FaBookOpen size={32} /></span>
+                  <span className="absolute left-[12%] bottom-[22%] text-primary/15"><FaPenNib size={26} /></span>
+
+                  <span className="absolute right-[10%] top-[22%] text-primary/20"><FaBookOpen size={30} /></span>
+                  <span className="absolute right-[20%] top-[38%] text-primary/25"><FaMusic size={34} /></span>
+                  <span className="absolute right-[14%] bottom-[18%] text-primary/15"><FaPenNib size={28} /></span>
+
+                  <span className="absolute left-1/2 top-[12%] -translate-x-1/2 text-primary/15"><FaMusic size={40} /></span>
+                  <span className="absolute left-1/2 bottom-[12%] -translate-x-1/2 text-primary/15"><FaBookOpen size={36} /></span>
+                </div>
                 {/* Soft floating orbs for composing visual (behind content) */}
                 {isGenerating && (
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -845,7 +859,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
             <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 pt-16">
                 {/* Page title */}
                 <header className="mb-6 text-center">
-                    <h1 className="text-3xl sm:text-4xl font-bold text-slate-900">Knotes Composer</h1>
+                    <h1 className="text-3xl sm:text-4xl font-bold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400">Knotes Composer</h1>
                     <p className="mt-1 text-sm text-slate-700">Customize how your AI turns study material into music</p>
                     <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/80 ring-1 ring-black/10 p-1">
                       <button

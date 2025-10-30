@@ -74,7 +74,7 @@ const StudyMusicGenerator = () => {
       let href: string | undefined = undefined;
       try {
         const sid = sessionStorage.getItem('knotes_current_session_id');
-        href = sid ? `/music/${sid}` : '/library?intent=music';
+        href = sid ? `/music/${sid}` : '/music';
       } catch {}
       addRecentTrack({ id: String(Date.now()), title, playedAt: new Date().toISOString(), href });
     } catch {}

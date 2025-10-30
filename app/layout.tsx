@@ -22,8 +22,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark:[color-scheme:dark] [color-scheme:light]">
-      <body className="antialiased font-sans text-slate-900 bg-accent dark:bg-[--color-dark-bg] dark:text-[--color-accent] min-h-screen">
+    <html lang="en" className="[color-scheme:light]">
+      <body className="antialiased font-sans text-slate-900 bg-white min-h-screen">
         <AuthProvider>
           <PWA />
           <NavBar isAuthenticated={false} />

@@ -43,12 +43,15 @@ const MusicSettingsDialog = ({
   const tempoValue = settings.tempo === 'Slow' ? 15 : settings.tempo === 'Fast' ? 85 : 50;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-        <div className="relative w-[clamp(320px,90vw,500px)] max-h-[90vh] bg-white/70 backdrop-blur-md rounded-2xl border border-white/20 shadow-2xl flex flex-col p-8">
-            <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/10 text-gray-700 transition-colors" title="Close" aria-label="Close settings">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={(e)=>{ if (e.target === e.currentTarget) onClose(); }}>
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm" />
+        {/* Panel */}
+        <div className="relative z-10 w-[clamp(320px,92vw,560px)] max-h-[88vh] rounded-3xl bg-accent/95 dark:bg-[--color-dark-bg]/95 ring-1 ring-black/10 dark:ring-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.25)] flex flex-col p-6">
+            <button onClick={onClose} className="absolute top-4 right-4 inline-flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-black/10 dark:ring-white/10 bg-white/70 dark:bg-white/5 text-slate-700 dark:text-[--color-accent] hover:bg-white/80" title="Close" aria-label="Close settings">
                 <BsXLg />
             </button>
-            <h1 className="text-2xl font-medium text-center mb-6 text-gray-900">Background Study Music</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold text-center mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400">Background Study Music</h1>
 
             <div className="flex-grow overflow-y-auto pr-4 -mr-4 mb-6">
                  <div className="mb-5">
