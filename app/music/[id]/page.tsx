@@ -122,13 +122,13 @@ export default function MusicPage() {
     const allSelected = topics.length > 0 && selectedTopics.size === topics.length;
 
     // Generator controls
-    const [genre, setGenre] = useState<(typeof GENRES)[number]>("Lo-Fi Chill");
+    const [genre, setGenre] = useState<(typeof GENRES)[number]>("Lo-fi");
     const [mood, setMood] = useState<(typeof MOODS)[number]>("Calm");
     const [tempo, setTempo] = useState<number>(75); // 40-180 typical range, we show 40-120 normalized
     const [energy, setEnergy] = useState<Energy>("Low");
     const [instrumentMix, setInstrumentMix] = useState<Record<string, boolean>>(() => {
         const base: Record<string, boolean> = {};
-        INSTRUMENTS.forEach((i) => (base[i] = i === "Piano" || i === "Waves"));
+        INSTRUMENTS.forEach((i) => (base[i] = i === "Lo-fi" || i === "Ambient"));
         return base;
     });
 
@@ -146,7 +146,10 @@ export default function MusicPage() {
     const [progress, setProgress] = useState(0); // for legacy bar (kept for top progress bar only)
     const progressRef = useRef<number>(0);
 
-    const [recentTracks, setRecentTracks] = useState(() => getRecentTracks());
+    const [recentTracks, setRecentTracks] = useState<ReturnType<typeof getRecentTracks>>([]);
+    useEffect(() => {
+        try { setRecentTracks(getRecentTracks()); } catch {}
+    }, []);
     // Manual topics input
     const [manualTopics, setManualTopics] = useState<string>("");
     // Track persistence for playlists

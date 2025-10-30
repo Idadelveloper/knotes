@@ -17,7 +17,7 @@ export class AudioAnalyser extends EventTarget {
   }
   
   private getData() {
-    this.node.getByteFrequencyData(this.freqData);
+    this.node.getByteFrequencyData(this.freqData as unknown as Uint8Array<ArrayBuffer>);
     const avg = this.freqData.reduce((a, b) => a + b, 0) / this.freqData.length;
     return {
       freqData: this.freqData,
