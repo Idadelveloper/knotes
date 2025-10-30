@@ -307,7 +307,7 @@ const MusicPlayer = ({
         )}
         <button
           onClick={() => setIsMinimized(false)}
-          className="fixed bottom-6 right-6 w-16 h-16 bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center transform hover:scale-110 transition-all"
+          className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-white/80 dark:bg-white/5 backdrop-blur ring-1 ring-black/10 dark:ring-white/10 text-slate-900 dark:text-[--color-accent] shadow-lg flex items-center justify-center transform hover:scale-105 transition-all hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
           title="Show Music Player"
           aria-label="Show Music Player"
         >
@@ -326,7 +326,7 @@ const MusicPlayer = ({
         <audio ref={audioRef} src={audioUrl} preload="auto" playsInline />
       )}
 
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[clamp(320px,90vw,900px)] bg-white/20 backdrop-blur-md rounded-xl border border-white/10 shadow-2xl flex flex-col overflow-hidden">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[clamp(320px,90vw,900px)] rounded-2xl bg-white/80 dark:bg-white/5 backdrop-blur ring-1 ring-black/10 dark:ring-white/10 shadow-2xl flex flex-col overflow-hidden text-slate-900 dark:text-[--color-accent]">
         <canvas ref={canvasRef} className="absolute top-[-5px] left-0 w-full h-[30px] opacity-50 pointer-events-none" width="1000" height="40"></canvas>
 
         {/* Top row: track info + controls on the same line, with right-side tools */}
@@ -370,7 +370,7 @@ const MusicPlayer = ({
 
           {/* Right cluster: time, volume, settings, download, hide */}
           <div className="flex justify-end items-center gap-4">
-            <div className="font-mono text-sm text-gray-300" aria-live="polite">{formatTime(elapsedTime)} / {formatTime(duration)}</div>
+            <div className="font-mono text-sm text-slate-700 dark:text-gray-300" aria-live="polite">{formatTime(elapsedTime)} / {formatTime(duration)}</div>
             <div className="flex items-center gap-2 w-28">
               {/* simple volume */}
               <input

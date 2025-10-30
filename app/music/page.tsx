@@ -15,6 +15,7 @@ import {
 } from "@/lib/storage/music";
 import { PlaybackState } from "@/lib/types/music";
 import { FaPlay, FaDownload, FaPlus, FaMusic, FaListUl } from "react-icons/fa";
+import { FaBookOpen, FaPenNib } from "react-icons/fa6";
 
 export default function MusicPage() {
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -142,24 +143,51 @@ export default function MusicPage() {
   const emptyPlaylists = playlists.length === 0;
 
   return (
-    <div className="min-h-screen bg-white">
-      <main className="mx-auto max-w-5xl px-4 sm:px-6 py-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Music Hub</h1>
-        <div className="mb-5">
+    <div className="relative w-full min-h-screen overflow-hidden">
+      {/* Decorative background gradients and icons (match landing) */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(50% 50% at 0% 0%, rgba(139,198,236,0.35) 0%, rgba(139,198,236,0.08) 55%, rgba(139,198,236,0.03) 100%), " +
+              "radial-gradient(55% 55% at 100% 100%, rgba(179,255,171,0.35) 0%, rgba(179,255,171,0.08) 55%, rgba(179,255,171,0.02) 100%)",
+          }}
+        />
+        {/* Scattered study/music icons */}
+        <div className="absolute inset-0">
+          <span className="absolute left-[8%] top-[18%] text-primary/25"><FaMusic size={28} /></span>
+          <span className="absolute left-[22%] top-[40%] text-primary/20"><FaBookOpen size={32} /></span>
+          <span className="absolute left-[12%] bottom-[22%] text-primary/15"><FaPenNib size={26} /></span>
+
+          <span className="absolute right-[10%] top-[22%] text-primary/20"><FaBookOpen size={30} /></span>
+          <span className="absolute right-[20%] top-[38%] text-primary/25"><FaMusic size={34} /></span>
+          <span className="absolute right-[14%] bottom-[18%] text-primary/15"><FaPenNib size={28} /></span>
+
+          <span className="absolute left-1/2 top-[12%] -translate-x-1/2 text-primary/15"><FaMusic size={40} /></span>
+          <span className="absolute left-1/2 bottom-[12%] -translate-x-1/2 text-primary/15"><FaBookOpen size={36} /></span>
+        </div>
+      </div>
+
+      <main className="mx-auto max-w-5xl px-4 sm:px-6 pt-16 pb-10">
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <h1 className="text-3xl sm:text-4xl font-bold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400">Music Hub</h1>
           <button
             onClick={handleGenerateClick}
-            className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2 text-white shadow-[0_4px_0_rgba(0,0,0,0.08)] hover:bg-purple-700 hover:shadow-[0_6px_0_rgba(0,0,0,0.12)] active:translate-y-px active:shadow-[0_3px_0_rgba(0,0,0,0.12)]"
+            className="hidden sm:inline-flex items-center justify-center gap-2 rounded-full bg-white/80 dark:bg-white/5 backdrop-blur px-5 py-2 ring-1 ring-black/10 dark:ring-white/10 text-slate-900 dark:text-[--color-accent] hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
             title="Generate a new track"
+            aria-label="Generate a new track"
           >
-            Generate Track
+            <FaMusic aria-hidden />
+            <span>Generate Track</span>
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left: Tracks list */}
-          <section className="rounded-xl border border-black/5 p-4 shadow-sm bg-white">
+          <section className="rounded-2xl bg-white/85 dark:bg-white/5 backdrop-blur p-4 shadow-sm ring-1 ring-black/10 dark:ring-white/10">
             <div className="flex items-center gap-2 mb-3">
               <FaMusic className="text-purple-500" />
-              <h2 className="text-lg font-semibold text-slate-900">Generated Songs (Lyrics)</h2>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent]">Generated Songs (Lyrics)</h2>
             </div>
             {emptyTracks ? (
               <div className="text-sm text-slate-600">
@@ -205,11 +233,11 @@ export default function MusicPage() {
           </section>
 
           {/* Right: Playlists */}
-          <section className="rounded-xl border border-black/5 p-4 shadow-sm bg-white">
+          <section className="rounded-2xl bg-white/85 dark:bg-white/5 backdrop-blur p-4 shadow-sm ring-1 ring-black/10 dark:ring-white/10">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <FaListUl className="text-emerald-500" />
-                <h2 className="text-lg font-semibold text-slate-900">Playlists</h2>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent]">Playlists</h2>
               </div>
               <button
                 className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
@@ -268,6 +296,18 @@ export default function MusicPage() {
           </div>
         )}
       </main>
+
+      {/* Mobile FAB for Generate Track */}
+      <button
+        onClick={handleGenerateClick}
+        className="sm:hidden fixed bottom-6 right-6 z-30 h-14 w-14 rounded-full bg-secondary text-slate-900 shadow-lg ring-1 ring-black/10 hover:brightness-105 active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
+        title="Generate a new track"
+        aria-label="Generate a new track"
+      >
+        <FaMusic className="mx-auto" />
+        <span className="sr-only">Generate Track</span>
+      </button>
+
       <SelectDialog open={openSelect} onClose={() => setOpenSelect(false)} />
 
       {/* Add to Playlist (single track) */}
@@ -332,8 +372,8 @@ export default function MusicPage() {
       {/* View playlist drawer */}
       {viewPlaylistId && (
         <div className="fixed inset-x-0 bottom-0 z-40">
-          <div className="mx-auto max-w-5xl rounded-t-2xl border border-black/10 bg-white shadow-2xl">
-            <div className="sticky top-0 bg-white flex items-center justify-between px-4 py-3 border-b border-black/5">
+          <div className="mx-auto max-w-5xl rounded-t-2xl ring-1 ring-black/10 dark:ring-white/10 bg-white/95 dark:bg-[--color-dark-bg]/95 backdrop-blur shadow-2xl">
+            <div className="sticky top-0 bg-white/95 dark:bg-[--color-dark-bg]/95 backdrop-blur flex items-center justify-between px-4 py-3 border-b border-black/5 dark:border-white/10">
               <div className="font-semibold">{playlists.find(p => p.id === viewPlaylistId)?.name || 'Playlist'}</div>
               <div className="flex items-center gap-2">
                 <button

@@ -171,26 +171,26 @@ export default function SettingsPage() {
     <main className="pb-10 space-y-6">
       {/* Header */}
       <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
+        <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400">Settings</h1>
         <div className="flex items-center gap-2">
           <button
             onClick={() => router.push('/pro')}
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium shadow-sm"
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2 bg-white/80 dark:bg-white/5 backdrop-blur ring-1 ring-amber-300/60 dark:ring-amber-400/40 text-amber-700 dark:text-amber-300 hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
             title="Unlock Knotes Pro"
           >
             <FaCrown /> Subscribe to Pro
           </button>
           <button
             onClick={() => alert('Chrome extension is coming soon!')}
-            className="relative inline-flex items-center gap-2 rounded-lg px-4 py-2 ring-1 ring-blue-200 bg-white text-blue-700 hover:bg-blue-50 font-medium"
+            className="relative inline-flex items-center gap-2 rounded-full px-4 py-2 bg-white/80 dark:bg-white/5 backdrop-blur ring-1 ring-blue-300/60 dark:ring-blue-400/40 text-blue-700 dark:text-blue-300 hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
             title="Chrome extension coming soon"
           >
             Get Chrome Extension
-            <span className="ml-2 inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">Coming soon</span>
+            <span className="ml-2 inline-flex items-center rounded-full bg-blue-100/80 text-blue-700 dark:bg-white/10 dark:text-blue-200 px-2 py-0.5 text-xs font-semibold">Coming soon</span>
           </button>
           <button
             onClick={handleLogout}
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 ring-1 ring-red-200 bg-white hover:bg-red-50 text-red-600 font-medium"
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2 bg-white/80 dark:bg-white/5 backdrop-blur ring-1 ring-red-300/60 dark:ring-red-400/40 text-red-700 dark:text-red-300 hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
             title="Sign out of your account"
           >
             <FaSignOutAlt /> Log Out

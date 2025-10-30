@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Collection, createCollection, getCollection, saveCollection, removeSessionFromCollection } from "@/lib/storage/collections";
+import { Collection, createCollection, getCollection, saveCollection } from "@/lib/storage/collections";
 import { listSessions } from "@/lib/storage/sessions";
 import { HiOutlineX } from "react-icons/hi";
 import SelectDialog from "@/components/music/SelectDialog";
@@ -77,11 +77,11 @@ export default function CollectionEditor({ open, onClose, collectionId, onSaved 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative z-10 w-[92vw] max-w-xl rounded-2xl bg-white shadow-xl ring-1 ring-black/10">
+      <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-[92vw] max-w-xl rounded-3xl bg-white/80 dark:bg-white/5 backdrop-blur shadow-[0_20px_50px_rgba(0,0,0,0.25)] ring-1 ring-black/10 dark:ring-white/10">
         <div className="flex items-center justify-between px-5 py-4 border-b border-black/5">
-          <h3 className="text-lg font-semibold text-slate-900">{collectionId ? 'Edit Collection' : 'New Collection'}</h3>
-          <button aria-label="Close" onClick={onClose} className="inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-black/5">
+          <h3 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400">{collectionId ? 'Edit Collection' : 'New Collection'}</h3>
+          <button aria-label="Close" onClick={onClose} className="inline-flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-black/10 dark:ring-white/10 bg-white/70 dark:bg-white/5 text-slate-700 dark:text-[--color-accent] hover:bg-white/80">
             <HiOutlineX />
           </button>
         </div>
@@ -92,7 +92,7 @@ export default function CollectionEditor({ open, onClose, collectionId, onSaved 
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Biology — Cell Structure"
-              className="w-full rounded-lg border border-black/10 px-3 py-2 outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full rounded-xl px-3 py-2 bg-white/70 dark:bg-white/5 backdrop-blur ring-1 ring-black/10 dark:ring-white/10 outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 text-slate-900 dark:text-[--color-accent] placeholder:text-slate-400"
             />
           </div>
 
@@ -100,7 +100,7 @@ export default function CollectionEditor({ open, onClose, collectionId, onSaved 
             <div className="text-sm font-medium text-slate-800">Sessions in this collection</div>
             <button
               onClick={() => setOpenSelect(true)}
-              className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm bg-white/80 dark:bg-white/5 backdrop-blur ring-1 ring-black/10 dark:ring-white/10 text-slate-900 dark:text-[--color-accent] hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
               title="Add session"
             >
               Add Session
@@ -131,10 +131,10 @@ export default function CollectionEditor({ open, onClose, collectionId, onSaved 
           )}
 
           <div className="mt-5 flex items-center justify-end gap-3">
-            <button onClick={onClose} className="px-4 py-2 rounded-lg border border-black/10 text-slate-700">
+            <button onClick={onClose} className="px-4 py-2 rounded-full bg-white/80 dark:bg-white/5 backdrop-blur ring-1 ring-black/10 dark:ring-white/10 text-slate-700 dark:text-[--color-accent] hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60">
               Cancel
             </button>
-            <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60">
+            <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-60 shadow-sm">
               Save
             </button>
           </div>

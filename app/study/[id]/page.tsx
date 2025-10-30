@@ -848,7 +848,7 @@ export default function StudyWorkspace() {
             ) : (
               <button
                 onClick={() => setTimerOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2 hover:bg-blue-200"
+                className="inline-flex items-center gap-2 rounded-full bg-white/80 dark:bg-white/5 backdrop-blur px-4 py-2 ring-1 ring-black/10 dark:ring-white/10 text-slate-900 dark:text-[--color-accent] hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                 title="Open timer"
               >
                 <FaClock />
@@ -860,16 +860,9 @@ export default function StudyWorkspace() {
           {/* Center: Actions */}
           {!focusMode && (
             <div className="hidden sm:flex items-center gap-3">
-              <button
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2 hover:bg-blue-200"
-                onClick={() => pushToast("📄 Upload coming soon")}
-                title="Upload your notes"
-              >
-                <FaCloudUploadAlt /> Upload Notes
-              </button>
               <div className="relative">
                 <button
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2 hover:bg-blue-200"
+                  className="inline-flex items-center gap-2 rounded-full bg-white/80 dark:bg-white/5 backdrop-blur px-4 py-2 ring-1 ring-black/10 dark:ring-white/10 text-slate-900 dark:text-[--color-accent] hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                   onClick={() => setMusicMenuOpen(v => !v)}
                   title="Generate Study Music"
                   aria-haspopup="menu"
@@ -878,7 +871,7 @@ export default function StudyWorkspace() {
                   <FaMusic /> Generate Study Music <span aria-hidden>▾</span>
                 </button>
                 {musicMenuOpen && (
-                  <div role="menu" className="absolute z-20 mt-2 w-48 rounded-lg bg-white shadow-lg ring-1 ring-black/10 overflow-hidden">
+                  <div role="menu" className="absolute z-20 mt-2 w-56 right-0 rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur shadow-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden">
                     <button
                       role="menuitem"
                       className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-100"
@@ -897,7 +890,7 @@ export default function StudyWorkspace() {
                 )}
               </div>
               <button
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2 hover:bg-blue-200"
+                className="inline-flex items-center gap-2 rounded-full bg-white/80 dark:bg-white/5 backdrop-blur px-4 py-2 ring-1 ring-black/10 dark:ring-white/10 text-slate-900 dark:text-[--color-accent] hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                 onClick={() => { pushToast("📝 Generating quiz…"); try { const sid = sessionStorage.getItem('knotes_current_session_id'); if (sid) router.push(`/study/${sid}/quiz`); else router.push(`/study/${routeId || ''}/quiz`); } catch { const sid = typeof window !== 'undefined' ? (sessionStorage.getItem('knotes_current_session_id') || routeId || '') : (routeId || ''); router.push(`/study/${sid}/quiz`); } }}
                 title="Generate Quiz"
               >
@@ -925,9 +918,6 @@ export default function StudyWorkspace() {
         {/* Center actions on mobile */}
         {!focusMode && (
           <div className="sm:hidden flex items-center justify-center gap-3 mb-4">
-            <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => pushToast('📄 Upload coming soon')}>
-              <FaCloudUploadAlt /> Upload Notes
-            </button>
             <div className="relative">
               <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => setMusicMenuOpen(v => !v)} aria-haspopup="menu" aria-expanded={musicMenuOpen}>
                 <FaMusic /> Generate Study Music <span aria-hidden>▾</span>
@@ -943,7 +933,7 @@ export default function StudyWorkspace() {
                 </div>
               )}
             </div>
-            <button className="inline-flex items-center gap-2 rounded-lg bg-blue-100 text-blue-700 px-4 py-2" onClick={() => { pushToast('📝 Generating quiz…'); try { const sid = sessionStorage.getItem('knotes_current_session_id'); if (sid) router.push(`/study/${sid}/quiz`); else router.push(`/study/${routeId || ''}/quiz`); } catch { const sid = typeof window !== 'undefined' ? (sessionStorage.getItem('knotes_current_session_id') || routeId || '') : (routeId || ''); router.push(`/study/${sid}/quiz`); } }}>
+            <button className="inline-flex items-center gap-2 rounded-full bg-white/80 dark:bg-white/5 backdrop-blur px-4 py-2 ring-1 ring-black/10 dark:ring-white/10 text-slate-900 dark:text-[--color-accent] hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60" onClick={() => { pushToast('📝 Generating quiz…'); try { const sid = sessionStorage.getItem('knotes_current_session_id'); if (sid) router.push(`/study/${sid}/quiz`); else router.push(`/study/${routeId || ''}/quiz`); } catch { const sid = typeof window !== 'undefined' ? (sessionStorage.getItem('knotes_current_session_id') || routeId || '') : (routeId || ''); router.push(`/study/${sid}/quiz`); } }}>
               <FaQuestionCircle /> Generate Quiz
             </button>
           </div>
@@ -967,7 +957,7 @@ export default function StudyWorkspace() {
 
       {/* Main card with two-column grid */}
       <div className={`mx-auto w-full max-w-7xl px-4 sm:px-6 pb-6 ${rightPadClass} transition-[padding] duration-300`}>
-        <div className="bg-white rounded-2xl shadow-lg p-8 ring-1 ring-black/5">
+        <div className="rounded-2xl bg-white/90 dark:bg-white/5 backdrop-blur p-8 ring-1 ring-black/10 dark:ring-white/10 shadow-md">
           <div className="grid grid-cols-1 gap-8">
             {/* Notes Panel with Tabs */}
             <section>

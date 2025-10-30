@@ -42,7 +42,7 @@ export default function Landing() {
         <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">
          
         </div><a
-         className="inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium text-white bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 shadow-[0_4px_0_rgba(0,0,0,0.1)] transition hover:shadow-[0_6px_0_rgba(0,0,0,0.15)] hover:brightness-105 active:translate-y-px active:shadow-[0_3px_0_rgba(0,0,0,0.15)]"
+         className="inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium text-slate-900 dark:text-[--color-accent] hover:underline focus:outline-none focus-visible:underline transition"
           href="/login"
          >
             Get Started
