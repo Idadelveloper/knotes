@@ -16,8 +16,11 @@ import {
 import { PlaybackState } from "@/lib/types/music";
 import { FaPlay, FaDownload, FaPlus, FaMusic, FaListUl } from "react-icons/fa";
 import { FaBookOpen, FaPenNib } from "react-icons/fa6";
+import { useRequireAuth } from "@/components/useRequireAuth";
 
 export default function MusicPage() {
+  const { user, loading } = useRequireAuth();
+  if (!user && !loading) return null;
   const [tracks, setTracks] = useState<Track[]>([]);
   const [playlists, setPlaylists] = useState<{ id: string; name: string; createdAt: string }[]>([]);
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
@@ -62,7 +65,7 @@ export default function MusicPage() {
     try {
       const p = createPlaylist(name.trim());
       setPlaylists(listPlaylists());
-      // Let user pick songs to add now
+      // Let authUser pick songs to add now
       setAddTracksPlaylistId(p.id);
       setTrackSelection({});
       setAddTracksOpen(true);

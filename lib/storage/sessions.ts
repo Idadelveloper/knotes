@@ -7,7 +7,7 @@ export type StoredSession = {
   createdAt: string; // ISO string
   originalText: string; // raw extracted text
   structuredText: string; // rewritten/structured text (markdown preferred)
-  editableText?: string; // user's working copy (markdown)
+  editableText?: string; // authUser's working copy (markdown)
 };
 
 const SESSIONS_KEY = "knotes_sessions_index"; // array of {id,title,createdAt}

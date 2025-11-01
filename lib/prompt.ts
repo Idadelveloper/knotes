@@ -2,7 +2,7 @@
 
 // Chrome Prompt API (LanguageModel) integration with graceful fallback to Firebase AI Logic (Gemini)
 // This utility manages a reusable on-device session when available and
-// provides a high-level function to answer questions based on the user's notes.
+// provides a high-level function to answer questions based on the authUser's notes.
 
 import { getGeminiModel } from "./ai";
 

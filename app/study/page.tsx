@@ -8,8 +8,11 @@ import CollectionCard from "@/components/study/CollectionCard";
 import CollectionEditor from "@/components/study/CollectionEditor";
 import { FaPlus, FaFolderOpen, FaMusic } from "react-icons/fa";
 import { FaBookOpen, FaPenNib } from "react-icons/fa6";
+import { useRequireAuth } from "@/components/useRequireAuth";
 
 export default function StudyAreaPage() {
+  const { user, loading } = useRequireAuth();
+  if (!user && !loading) return null;
   const router = useRouter();
   const [sessions, setSessions] = useState<{ id: string; title: string; createdAt: string }[]>([]);
   const [collections, setCollections] = useState<{ id: string; name: string; createdAt: string }[]>([]);

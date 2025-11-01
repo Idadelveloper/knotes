@@ -24,6 +24,7 @@ import { generateTrackName } from "@/lib/writer";
 import { addRecentTrack, getRecentTracks, incStat } from "@/lib/stats";
 import { getGeminiModel } from "@/lib/ai";
 import { addTrack } from "@/lib/storage/music";
+import { useRequireAuth } from "@/components/useRequireAuth";
 
 // Simple toast messages (local, minimal)
 type Toast = { id: number; message: string };
@@ -46,6 +47,8 @@ type Energy = "Low" | "Medium" | "High";
 const INSTRUMENTS = ['Acoustic','Electronic','Orchestral','Minimal','Full Band','Lo-fi','Jazz Ensemble','Pop Band','Cinematic','Ambient','Rock Setup'] as const;
 
 export default function MusicPage() {
+    const { user, loading } = useRequireAuth();
+    if (!user && !loading) return null;
     const { id } = (require('next/navigation') as any).useParams?.() || {};
     const [notes, setNotes] = useState<string>('');
     const [sessionTitle, setSessionTitle] = useState<string>('');

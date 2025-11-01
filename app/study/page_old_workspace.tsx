@@ -1246,7 +1246,7 @@ export default function StudyWorkspace() {
         userName={userDisplay}
         userAvatarUrl=""
         onSend={(text) => {
-          // Delegate to the prompt-powered handler that uses the user's notes as context
+          // Delegate to the prompt-powered handler that uses the authUser's notes as context
           sendChat(text);
         }}
         onMicStart={async () => {
@@ -1266,7 +1266,7 @@ export default function StudyWorkspace() {
                 const { fileToGenerativePart, getGeminiModel } = await import('@/lib/ai');
                 const part = await fileToGenerativePart(file);
                 const model = getGeminiModel('gemini-2.5-flash');
-                const prompt = 'Transcribe this user audio into accurate text for a study assistant chat.';
+                const prompt = 'Transcribe this authUser audio into accurate text for a study assistant chat.';
                 const result = await model.generateContent([prompt, part as any]);
                 const transcript = (result?.response?.text?.() as string) || '';
                 if (transcript.trim()) {
@@ -1305,7 +1305,7 @@ export default function StudyWorkspace() {
             const next = !speakEnabled;
             setSpeakEnabled(next);
             if (next) {
-              // Attempt to unlock/resume speech on user gesture and give quick feedback
+              // Attempt to unlock/resume speech on authUser gesture and give quick feedback
               const { canSpeak, speak } = await import('@/lib/utils/speech');
               if (!canSpeak()) {
                 pushToast('⚠️ Voice not supported in this browser');

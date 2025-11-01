@@ -7,13 +7,14 @@ import { FaBookOpen, FaPenNib } from "react-icons/fa6";
 import { HiOutlineX } from "react-icons/hi";
 import { extractTextFromFile } from "@/lib/ai";
 import { rewriteText, generateTitle } from "@/lib/rewriter";
-import { useAuth } from "@/components/AuthProvider";
+import { useRequireAuth } from "@/components/useRequireAuth";
 import { getStats, getRecentSessions, getRecentTracks, incStat, addRecentSession, type DashboardStats, type RecentSession, type RecentTrack } from "@/lib/stats";
 import { createSession } from "@/lib/storage/sessions";
 
 export default function HomePage() {
+  // Require authentication; redirect to landing if signed out
+  const { user: authUser, loading } = useRequireAuth();
   // Auth + Dashboard state
-  const { user } = useAuth();
   const [stats, setStatsState] = useState<DashboardStats>({ uploads: 0, studyMinutes: 0, musicGenerations: 0, quizzesTaken: 0 });
   const [recents, setRecents] = useState<RecentSession[]>([]);
   const [tracks, setTracks] = useState<RecentTrack[]>([]);
@@ -141,7 +142,7 @@ export default function HomePage() {
     }
   }, [isModalOpen]);
 
-  const displayName = (user?.displayName || user?.email || "there") as string;
+  const displayName = (authUser?.displayName || authUser?.email || "there") as string;
 
   const StatCard = ({ label, value }: { label: string; value: string | number }) => (
     <div className="rounded-2xl ring-1 ring-black/5 dark:ring-white/10 bg-white/70 dark:bg-white/5 p-4 flex flex-col gap-1">

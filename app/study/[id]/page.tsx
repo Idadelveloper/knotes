@@ -9,7 +9,7 @@ import ChatPanel from "@/components/ChatPanel";
 import { useRouter, useParams } from "next/navigation";
 import MusicGenerator from "@/components/music/MusicGenerator";
 import MusicPlayer from "@/components/music/MusicPlayer";
-import { useAuth } from "@/components/AuthProvider";
+import { useRequireAuth } from "@/components/useRequireAuth";
 import { getGeminiModel } from "@/lib/ai";
 import { translateText } from "@/lib/translate";
 import { summarizeText, isSummarizerAvailable } from "@/lib/summarize";
@@ -23,6 +23,8 @@ import { updateEditableText, getSession } from "@/lib/storage/sessions";
 type Toast = { id: number; message: string };
 
 export default function StudyWorkspace() {
+  const { user, loading } = useRequireAuth();
+  if (!user && !loading) return null;
   const router = useRouter();
   const params = useParams();
   const routeId = Array.isArray((params as any)?.id) ? (params as any).id[0] : ((params as any)?.id as string | undefined);
@@ -40,7 +42,6 @@ export default function StudyWorkspace() {
     } catch {}
   }, [routeId]);
 
-  const { user } = useAuth();
   const userDisplay = (user?.displayName || user?.email || 'You') as string;
   // Editor refs/state
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -734,6 +735,46 @@ export default function StudyWorkspace() {
       if (!transcript || transcript.replace(/\s+/g, '').length < 40) {
         transcript = rawText;
       }
+
+      // Ensure transcript fits Google Cloud TTS 4000-byte limit by summarizing if needed
+      try {
+        const encoder = new TextEncoder();
+        const bytesLen = encoder.encode(transcript).length;
+        if (bytesLen > 4000) {
+          const { summarizeText } = await import('@/lib/summarize');
+          // First pass: medium TL;DR, plain text
+          let reduced = (await summarizeText(transcript, {
+            type: 'tldr',
+            format: 'plain-text',
+            length: 'medium',
+            sharedContext:
+              'Condense into a natural, listener-friendly transcript for Text-to-Speech. Keep ONLY core learning content and key examples. No markdown headings.'
+          })).text || transcript;
+          // Second pass if still too large: short TL;DR
+          if (encoder.encode(reduced).length > 4000) {
+            reduced = (await summarizeText(reduced, {
+              type: 'tldr',
+              format: 'plain-text',
+              length: 'short',
+              sharedContext:
+                'Further condense to fit under 4000 bytes for TTS. Keep essential points only in natural sentences.'
+            })).text || reduced;
+          }
+          // Final guard: hard-trim to ~3950 bytes to leave headroom
+          if (encoder.encode(reduced).length > 4000) {
+            const target = 3950;
+            const arr = encoder.encode(reduced);
+            const slice = arr.slice(0, target);
+            const decoded = new TextDecoder().decode(slice);
+            // Try to cut at last sentence end if present
+            reduced = (decoded.lastIndexOf('.') > 0) ? decoded.slice(0, decoded.lastIndexOf('.') + 1) : decoded;
+          }
+          transcript = reduced.trim();
+        }
+      } catch (e) {
+        console.warn('[VoiceRead] Summarization to fit TTS limit failed or unavailable, proceeding with original transcript');
+      }
+
       setVoiceTranscript(transcript);
 
       // 3) Send transcript to TTS model
@@ -1406,7 +1447,7 @@ export default function StudyWorkspace() {
         userName={userDisplay}
         userAvatarUrl=""
         onSend={(text) => {
-          // Delegate to the prompt-powered handler that uses the user's notes as context
+          // Delegate to the prompt-powered handler that uses the authUser's notes as context
           sendChat(text);
         }}
         onMicStart={async () => {
@@ -1426,7 +1467,7 @@ export default function StudyWorkspace() {
                 const { fileToGenerativePart, getGeminiModel } = await import('@/lib/ai');
                 const part = await fileToGenerativePart(file);
                 const model = getGeminiModel('gemini-2.5-flash');
-                const prompt = 'Transcribe this user audio into accurate text for a study assistant chat.';
+                const prompt = 'Transcribe this authUser audio into accurate text for a study assistant chat.';
                 const result = await model.generateContent([prompt, part as any]);
                 const transcript = (result?.response?.text?.() as string) || '';
                 if (transcript.trim()) {
@@ -1465,7 +1506,7 @@ export default function StudyWorkspace() {
             const next = !speakEnabled;
             setSpeakEnabled(next);
             if (next) {
-              // Attempt to unlock/resume speech on user gesture and give quick feedback
+              // Attempt to unlock/resume speech on authUser gesture and give quick feedback
               const { canSpeak, speak } = await import('@/lib/utils/speech');
               if (!canSpeak()) {
                 pushToast('⚠️ Voice not supported in this browser');

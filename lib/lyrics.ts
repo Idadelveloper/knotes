@@ -16,7 +16,7 @@ export async function generateLyricsFromNotes(params: {
   singer: string;
   totalLengthSec?: number; // desired song length in seconds to inform lyric length
   maxLines?: number;
-  manualTopics?: string; // user-provided topics/areas to cover
+  manualTopics?: string; // authUser-provided topics/areas to cover
   // Expanded lyric controls
   toneMood?: string; // Calm, Energetic, etc.
   persona?: string; // Student, Narrator, Teacher, Rapper, Storyteller
@@ -143,7 +143,7 @@ export function buildMusicPromptFromControls(params: {
   const parts: string[] = [];
   const g = genre.toLowerCase();
   parts.push(`Create a ${mood.toLowerCase()} ${g} song with ${energy.toLowerCase()} energy.`);
-  parts.push('Important: Adhere strictly to the requested genre and mood. Do not deviate to other genres.');
+  parts.push('Important: Adhere strictly to the requested genre and mood. Do not deviate to other genres and make sure to sync with the lyrics provided and include the vocals.');
   if (tempoBpm) parts.push(`Target tempo around ${tempoBpm} BPM.`);
   if (params.dynamicTempo) parts.push('Enable dynamic tempo changes aligned to content intensity.');
   if (typeof durationSec === 'number') {

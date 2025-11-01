@@ -48,7 +48,7 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      {/* Bottom user section */}
+      {/* Bottom authUser section */}
       <div className="mt-auto">
         <div className="flex items-center gap-3 p-2">
           <div className="h-10 w-10 rounded-full overflow-hidden ring-1 ring-black/10 bg-white">

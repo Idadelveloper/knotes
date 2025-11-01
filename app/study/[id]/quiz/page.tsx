@@ -6,6 +6,7 @@ import { getGeminiModel } from "@/lib/ai";
 import { incStat } from "@/lib/stats";
 import { HiOutlineX } from "react-icons/hi";
 import { getSession } from "@/lib/storage/sessions";
+import { useRequireAuth } from "@/components/useRequireAuth";
 
 // Lightweight types for the quiz
 export type QuizQuestion = {
@@ -21,11 +22,13 @@ export type Quiz = {
 };
 
 export default function QuizPage() {
+  const { user, loading } = useRequireAuth();
+  if (!user && !loading) return null;
   const router = useRouter();
   const params = useParams();
   const routeId = Array.isArray((params as any)?.id) ? (params as any).id[0] : ((params as any)?.id as string | undefined);
 
-  const [loading, setLoading] = useState(true);
+  const [quizLoading, setQuizLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
@@ -102,7 +105,7 @@ export default function QuizPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quiz]);
-
+ 
   useEffect(() => {
     if (!timerRunning) {
       if (tickRef.current) {
@@ -157,7 +160,7 @@ export default function QuizPage() {
   useEffect(() => {
     let cancelled = false;
     async function generate() {
-      setLoading(true);
+      setQuizLoading(true);
       setError(null);
       setQuiz(null);
       try {
@@ -201,7 +204,7 @@ Notes (may include non-content administrative headers—ignore those):\n---\n${n
         console.error(e);
         if (!cancelled) setError(e?.message || "Failed to generate quiz.");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setQuizLoading(false);
       }
     }
     generate();
@@ -290,7 +293,7 @@ Rules:
   function regenerate() {
     // Simply reload route to trigger new generation
     router.refresh();
-    setLoading(true);
+    setQuizLoading(true);
     setError(null);
     setQuiz(null);
     setAnswers({});
@@ -347,7 +350,7 @@ Rules:
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6">
-        {loading && (
+        {quizLoading && (
           <div className="p-8 text-center text-slate-600">📝 Generating quiz from your session notes…</div>
         )}
         {error && (

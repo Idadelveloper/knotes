@@ -6,7 +6,7 @@ import { FaCloudUploadAlt, FaFileAlt, FaEllipsisH, FaUserCircle, FaFireAlt, FaSi
 import { signOut, deleteUser } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/components/AuthProvider";
+import { useRequireAuth } from "@/components/useRequireAuth";
 import { getStats, getRecentSessions, getRecentTracks, type DashboardStats } from "@/lib/stats";
 import { listSessions } from "@/lib/storage/sessions";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, AreaChart, Area, PieChart, Pie, Cell } from "recharts";
@@ -16,7 +16,8 @@ const PREF_BACKUP_ENABLED = "knotes_pref_backup";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading } = useRequireAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   // UI State
   const [displayMode, setDisplayMode] = useState<'Light' | 'Focus'>("Light");
@@ -132,15 +133,23 @@ export default function SettingsPage() {
 
   const handleLogout = async () => {
     try {
+      setLoggingOut(true);
       await signOut(auth);
-      router.push("/");
+      try { sessionStorage.clear(); } catch {}
+      try {
+        // Hard redirect to ensure a clean app state and avoid transient re-renders
+        window.location.replace("/");
+        return;
+      } catch {}
+      router.replace("/");
     } catch (e) {
+      setLoggingOut(false);
       alert("Failed to log out. Please try again.");
     }
   };
 
   const handleDeleteAccount = async () => {
-    if (!auth.currentUser) return alert("No user authenticated.");
+    if (!auth.currentUser) return alert("No authUser authenticated.");
     const sure = confirm("Delete your account and local data? This cannot be undone.");
     if (!sure) return;
     try {
