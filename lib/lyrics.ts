@@ -2,6 +2,7 @@
 
 import { getGeminiModel } from './ai';
 import { isWriterUsable } from './writer';
+import { sanitizeLyrics } from './proofreader';
 
 export type LyricsStyle = 'summary' | 'educational' | 'mix';
 
@@ -16,7 +17,7 @@ export async function generateLyricsFromNotes(params: {
   singer: string;
   totalLengthSec?: number; // desired song length in seconds to inform lyric length
   maxLines?: number;
-  manualTopics?: string; // user-provided topics/areas to cover
+  manualTopics?: string; // authUser-provided topics/areas to cover
   // Expanded lyric controls
   toneMood?: string; // Calm, Energetic, etc.
   persona?: string; // Student, Narrator, Teacher, Rapper, Storyteller
@@ -89,14 +90,20 @@ export async function generateLyricsFromNotes(params: {
           { context: 'Return only the lyrics with clear sections and short lines.' }
         );
         writer.destroy?.();
-        if (out && out.trim().length > 0) return out.trim();
+        if (out && out.trim().length > 0) {
+          const sanitized = await sanitizeLyrics(out.trim());
+          return sanitized.text;
+        }
       } catch {}
     }
     const model = getGeminiModel('gemini-2.5-flash');
     const prompt = `Write song lyrics intended for AI music generation with vocals. ${baseInstruction}\n\nGenre: ${genre}\nMood: ${mood}\nEnergy: ${energy}\n${tempoBpm ? `Tempo: ~${tempoBpm} BPM\n` : ''}${instruments.length ? `Instruments to feature: ${instruments.join(', ')}\n` : ''}Vocal style: ${singer}.\n${constraints}\n\n${context}\n\nReturn only the lyrics text, formatted with line breaks and blank lines between sections (Verse/Chorus/Bridge).`;
     const res = await model.generateContent(prompt);
     const txt = (res?.response?.text?.() as string) || '';
-    return txt.trim();
+    const cleaned = txt.trim();
+    if (!cleaned) return '';
+    const sanitized = await sanitizeLyrics(cleaned);
+    return sanitized.text;
   } catch (e) {
     // Minimal fallback – return empty (instrumental)
     return '';
@@ -143,7 +150,7 @@ export function buildMusicPromptFromControls(params: {
   const parts: string[] = [];
   const g = genre.toLowerCase();
   parts.push(`Create a ${mood.toLowerCase()} ${g} song with ${energy.toLowerCase()} energy.`);
-  parts.push('Important: Adhere strictly to the requested genre and mood. Do not deviate to other genres.');
+  parts.push('Important: Adhere strictly to the requested genre and mood. Do not deviate to other genres and make sure to sync with the lyrics provided and include the vocals.');
   if (tempoBpm) parts.push(`Target tempo around ${tempoBpm} BPM.`);
   if (params.dynamicTempo) parts.push('Enable dynamic tempo changes aligned to content intensity.');
   if (typeof durationSec === 'number') {

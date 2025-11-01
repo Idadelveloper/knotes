@@ -7,13 +7,14 @@ import { FaBookOpen, FaPenNib } from "react-icons/fa6";
 import { HiOutlineX } from "react-icons/hi";
 import { extractTextFromFile } from "@/lib/ai";
 import { rewriteText, generateTitle } from "@/lib/rewriter";
-import { useAuth } from "@/components/AuthProvider";
+import { useRequireAuth } from "@/components/useRequireAuth";
 import { getStats, getRecentSessions, getRecentTracks, incStat, addRecentSession, type DashboardStats, type RecentSession, type RecentTrack } from "@/lib/stats";
 import { createSession } from "@/lib/storage/sessions";
 
 export default function HomePage() {
+  // Require authentication; redirect to landing if signed out
+  const { user: authUser, loading } = useRequireAuth();
   // Auth + Dashboard state
-  const { user } = useAuth();
   const [stats, setStatsState] = useState<DashboardStats>({ uploads: 0, studyMinutes: 0, musicGenerations: 0, quizzesTaken: 0 });
   const [recents, setRecents] = useState<RecentSession[]>([]);
   const [tracks, setTracks] = useState<RecentTrack[]>([]);
@@ -24,9 +25,38 @@ export default function HomePage() {
   const [notesText, setNotesText] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState<string>("");
+  const progressIntervalRef = useRef<any>(null);
+  const progressCapRef = useRef<number>(0);
 
   // File input ref
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Progress helpers
+  function startProgressLoop() {
+    if (progressIntervalRef.current) return;
+    progressIntervalRef.current = setInterval(() => {
+      setProgress((p) => {
+        const cap = progressCapRef.current || 0;
+        if (p >= cap) return p;
+        const next = Math.min(p + Math.max(1, Math.round((cap - p) * 0.08)), cap);
+        return next;
+      });
+    }, 200);
+  }
+  function beginPhase(cap: number, message: string) {
+    progressCapRef.current = cap;
+    setProgressMessage(message);
+    startProgressLoop();
+  }
+  function resetProgress() {
+    try { if (progressIntervalRef.current) clearInterval(progressIntervalRef.current); } catch {}
+    progressIntervalRef.current = null;
+    progressCapRef.current = 0;
+    setProgress(0);
+    setProgressMessage("");
+  }
 
   // Drag & drop handlers (modal dropzone)
   const onDrop = async (e: React.DragEvent<HTMLDivElement>) => {
@@ -37,11 +67,15 @@ export default function HomePage() {
     if (files && files.length) {
       try {
         setUploading(true);
+        setProgress(5);
+        beginPhase(60, "Extracting text from document…");
         const text = await extractTextFromFile(files[0]);
         if (text && text.trim().length > 0) {
-          // Post-process with Chrome Rewriter (or Gemini fallback) to structure notes
+          beginPhase(90, "Structuring notes…");
           const { text: structured, used } = await rewriteText(text.trim());
+          beginPhase(98, "Generating a title…");
           const { title } = await generateTitle(text.trim());
+          beginPhase(100, "Finalizing…");
           const sess = createSession(title || "Study Notes", text.trim(), (structured || text).trim());
           addRecentSession({ id: sess.id, title: sess.title, openedAt: new Date().toISOString(), href: `/study/${sess.id}` });
           try { sessionStorage.setItem("knotes_current_session_id", sess.id); } catch {}
@@ -55,6 +89,7 @@ export default function HomePage() {
       } catch (err: any) {
         console.error(err);
         setUploadError(err?.message || "Failed to analyze the document.");
+        resetProgress();
       } finally {
         setUploading(false);
       }
@@ -82,6 +117,13 @@ export default function HomePage() {
     } catch {}
   }, []);
 
+  // Cleanup progress timer on unmount
+  useEffect(() => {
+    return () => {
+      try { if (progressIntervalRef.current) clearInterval(progressIntervalRef.current); } catch {}
+    };
+  }, []);
+
   // Close on Escape
   useEffect(() => {
     if (!isModalOpen) return;
@@ -92,7 +134,15 @@ export default function HomePage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [isModalOpen]);
 
-  const displayName = (user?.displayName || user?.email || "there") as string;
+  // Reset progress when modal closes
+  useEffect(() => {
+    if (!isModalOpen) {
+      resetProgress();
+      setUploading(false);
+    }
+  }, [isModalOpen]);
+
+  const displayName = (authUser?.displayName || authUser?.email || "there") as string;
 
   const StatCard = ({ label, value }: { label: string; value: string | number }) => (
     <div className="rounded-2xl ring-1 ring-black/5 dark:ring-white/10 bg-white/70 dark:bg-white/5 p-4 flex flex-col gap-1">
@@ -310,6 +360,19 @@ export default function HomePage() {
               {uploadError && (
                 <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">{uploadError}</div>
               )}
+              {/* Progress display */}
+              {uploading && (
+                <div className="mb-4 rounded-xl bg-white/80 dark:bg-white/5 p-4 ring-1 ring-black/10 dark:ring-white/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm text-slate-700 dark:text-slate-300" aria-live="polite">{progressMessage || "Working…"}</div>
+                    <div className="text-sm font-medium text-slate-900 dark:text-[--color-accent]" aria-atomic>{progress}%</div>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+                    <div className="h-full bg-primary transition-all duration-200" style={{ width: `${progress}%` }} />
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* File Upload */}
                 <section
@@ -329,7 +392,7 @@ export default function HomePage() {
                       <FaCloudUploadAlt size={22} />
                     </div>
                     <p className="mt-3 font-medium text-slate-900">Drag & drop your file</p>
-                    <p className="text-xs text-slate-600">.txt, .pdf, .docx</p>
+                    <p className="text-xs text-slate-600">PDF or TXT • Max 20MB</p>
                     <div className="mt-4">
                       <button
                         onClick={triggerFile}
@@ -340,7 +403,7 @@ export default function HomePage() {
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept=".txt,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                        accept=".txt,.pdf,application/pdf,text/plain"
                         className="hidden"
                         onChange={async (e) => {
                           const files = e.target.files;
@@ -348,10 +411,15 @@ export default function HomePage() {
                             setUploadError(null);
                             try {
                               setUploading(true);
+                              setProgress(5);
+                              beginPhase(60, "Extracting text from document…");
                               const text = await extractTextFromFile(files[0]);
                               if (text && text.trim().length > 0) {
+                                beginPhase(90, "Structuring notes…");
                                 const { text: structured, used } = await rewriteText(text.trim());
+                                beginPhase(98, "Generating a title…");
                                 const { title } = await generateTitle(text.trim());
+                                beginPhase(100, "Finalizing…");
                                 const sess = createSession(title || "Study Notes", text.trim(), (structured || text).trim());
                                 addRecentSession({ id: sess.id, title: sess.title, openedAt: new Date().toISOString(), href: `/study/${sess.id}` });
                                 try { sessionStorage.setItem("knotes_current_session_id", sess.id); } catch {}
@@ -364,6 +432,7 @@ export default function HomePage() {
                             } catch (err: any) {
                               console.error(err);
                               setUploadError(err?.message || "Failed to analyze the document.");
+                              resetProgress();
                             } finally {
                               setUploading(false);
                             }
@@ -404,8 +473,12 @@ export default function HomePage() {
                         }
                         try {
                           setUploading(true);
+                          setProgress(10);
+                          beginPhase(85, "Structuring notes…");
                           const { text: structured, used } = await rewriteText(text);
+                          beginPhase(98, "Generating a title…");
                           const { title } = await generateTitle(text);
+                          beginPhase(100, "Finalizing…");
                           const sess = createSession(title || "Study Notes", text, (structured || text).trim());
                           addRecentSession({ id: sess.id, title: sess.title, openedAt: new Date().toISOString(), href: `/study/${sess.id}` });
                           try { sessionStorage.setItem("knotes_current_session_id", sess.id); } catch {}
@@ -415,6 +488,7 @@ export default function HomePage() {
                         } catch (err: any) {
                           console.error(err);
                           setUploadError(err?.message || "Failed to process notes.");
+                          resetProgress();
                         } finally {
                           setUploading(false);
                         }

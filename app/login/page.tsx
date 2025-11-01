@@ -54,7 +54,7 @@ export default function LoginPage() {
         } else if (code === "auth/invalid-credential" || code === "auth/wrong-password") {
           setError("Incorrect email or password.");
         } else if (code === "auth/user-not-found") {
-          setError("No user found with this email. Try creating an account.");
+          setError("No authUser found with this email. Try creating an account.");
         } else {
           setError(err?.message || "Failed to sign in. Please try again.");
         }

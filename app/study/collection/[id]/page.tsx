@@ -7,8 +7,11 @@ import SelectDialog from "@/components/music/SelectDialog";
 import { getCollection, addSessionToCollection, removeSessionFromCollection } from "@/lib/storage/collections";
 import { getSession, listSessions } from "@/lib/storage/sessions";
 import StudyWorkspace from "../../[id]/page"; // reuse the main study workspace which reads from sessionStorage
+import { useRequireAuth } from "@/components/useRequireAuth";
 
 export default function CollectionStudyPage() {
+  const { user, loading } = useRequireAuth();
+  if (!user && !loading) return null;
   const params = useParams();
   const router = useRouter();
   const collectionId = Array.isArray((params as any)?.id) ? (params as any).id[0] : ((params as any)?.id as string | undefined);
