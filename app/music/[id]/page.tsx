@@ -215,6 +215,15 @@ export default function MusicPage() {
                 if (lyrics && lyrics.trim()) setLyricsText(lyrics.trim());
             } catch {}
 
+            // Hard requirement: must have generated lyrics, otherwise abort composing
+            if (!lyrics || !lyrics.trim()) {
+                console.warn('[Music] No lyrics generated; aborting song composition.');
+                pushToast('Could not generate lyrics. Please tweak settings and try again.');
+                setIsGenerating(false);
+                setPlaybackState('stopped');
+                return;
+            }
+
             // Generate track title — prioritize lyrics, then transcript/notes, then settings description
             try {
                 const instrumentList = Object.keys(instrumentMix).filter((k) => instrumentMix[k]);
@@ -284,10 +293,47 @@ export default function MusicPage() {
                 backgroundChants,
             });
 
+            // Debug: capture final prompt and lyrics for investigation
+            try {
+                console.debug('[Music] Final prompt (first 1200 chars):', prompt.slice(0, 1200));
+                console.debug('[Music] Lyrics length (chars):', (lyrics||'').length, 'words:', (lyrics||'').split(/\s+/).length);
+                localStorage.setItem('knotes_debug_last_prompt', prompt);
+                localStorage.setItem('knotes_debug_last_lyrics', lyrics);
+                localStorage.setItem('knotes_debug_last_settings', JSON.stringify({ genre, mood, tempo: Math.round(tempo), energy, instruments: instrumentList, singer }));
+            } catch {}
+
             // 4) Compose via ElevenLabs
             const lengthMs = Math.max(3000, Math.min(300000, Math.round(lengthSec * 1000)));
             try {
-                const res = await composeSongDetailed({ prompt, musicLengthMs: lengthMs, forceInstrumental: false });
+                let res = await composeSongDetailed({ prompt, musicLengthMs: lengthMs, forceInstrumental: false });
+                // If provider hints that result is instrumental-only, retry once with an ultra-minimal, vocal-enforcing prompt
+                try {
+                    const md: any = res?.metadata || {};
+                    const planStr = JSON.stringify(md).toLowerCase();
+                    const likelyInstrumental = (planStr.includes('instrumental') && !planStr.includes('vocal')) || planStr.includes('no vocals') || planStr.includes('"has_vocals":false');
+                    if (likelyInstrumental) {
+                        console.warn('[Music] Composition plan suggests instrumental-only; retrying with ultra-minimal vocal-enforcing prompt.');
+                        const minimalPrompt = buildMusicPromptFromControls({
+                            notes: '',
+                            lyrics,
+                            genre,
+                            mood,
+                            tempoBpm: Math.round(tempo),
+                            energy,
+                            instruments: instrumentList,
+                            singer,
+                            forceInstrumental: false,
+                            lyricStyle: lyricsMode,
+                            durationSec: lengthSec,
+                            manualTopics: '',
+                            extraHint: 'MANDATORY: Sing the provided lyrics exactly. No instrumental-only output. Vocals start at 0 seconds.',
+                        });
+                        try {
+                            localStorage.setItem('knotes_debug_last_prompt_retry_minimal', minimalPrompt);
+                        } catch {}
+                        res = await composeSongDetailed({ prompt: minimalPrompt, musicLengthMs: lengthMs, forceInstrumental: false });
+                    }
+                } catch {}
                 setGenStep(3);
                 // Persist audio blob in Cache Storage under a stable URL for replay/streaming later
                 let stableUrl = res.blobUrl;
@@ -326,7 +372,40 @@ export default function MusicPage() {
                 // Retry once with suggestion if bad_prompt
                 if (err && err.code === 'bad_prompt' && err.suggestion) {
                     try {
-                        const res2 = await composeSongDetailed({ prompt: err.suggestion, musicLengthMs: lengthMs, forceInstrumental: false });
+                        // Rebuild prompt but keep the generated lyrics mandatory; append ElevenLabs suggestion as an extra hint
+                        const prompt2 = buildMusicPromptFromControls({
+                            notes,
+                            lyrics,
+                            genre,
+                            mood,
+                            tempoBpm: Math.round(tempo),
+                            energy,
+                            instruments: instrumentList,
+                            singer,
+                            forceInstrumental: false,
+                            lyricStyle: lyricsMode,
+                            durationSec: lengthSec,
+                            manualTopics: manualTopics,
+                            dynamicTempo,
+                            beatType,
+                            instrumentDensity,
+                            backgroundVocals,
+                            effects,
+                            vocalType,
+                            vocalEmotion,
+                            vocalAccent,
+                            layeredVocals,
+                            instrumentVariation,
+                            songStructure,
+                            mathMode: mode==='math',
+                            beatAlignment,
+                            tempoSync,
+                            keywordEmphasis,
+                            autoChorusBuilder,
+                            backgroundChants,
+                            extraHint: `Model hint: ${err.suggestion}`,
+                        });
+                        const res2 = await composeSongDetailed({ prompt: prompt2, musicLengthMs: lengthMs, forceInstrumental: false });
                         // Persist audio blob to cache under stable URL (retry path)
                         let stableUrl2 = res2.blobUrl;
                         let newTrackId2: string | undefined = undefined;

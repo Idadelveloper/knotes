@@ -124,7 +124,7 @@ export async function generateTrackName(params: GenerateTrackNameParams): Promis
     console.warn('[Writer] generateTrackName failed, Writer unavailable or error:', e);
   }
 
-  // Firebase AI Logic fallback via getGeminiModel (uses direct GoogleGenAI or Firebase AI under the hood)
+  // Firebase AI Logic fallback via getGeminiModel
   try {
     const model = getGeminiModel('gemini-2.0-flash-lite');
     const prompt = `Generate exactly one short, creative music track title (2–6 words). Return only the title text on a single line. No lists, no numbering, no quotes, no emojis, no commentary.\nDescription: ${input}`;

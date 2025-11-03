@@ -1,7 +1,5 @@
 'use client';
 
-// Chrome Summarizer API integration with graceful fallback to Firebase AI Logic (Gemini)
-// Client-side only utilities
 
 import { getGeminiModel } from './ai';
 
@@ -54,7 +52,6 @@ export async function summarizeText(input: string, opts: SummarizeOptions = {}):
   // Attempt built-in Summarizer
   if (g && 'Summarizer' in g) {
     try {
-      // Optional availability check (also triggers downloadable state resolution)
       await g.Summarizer.availability().catch(() => undefined);
 
       const summarizer = await g.Summarizer.create({

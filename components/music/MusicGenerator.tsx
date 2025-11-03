@@ -79,7 +79,7 @@ const MusicGenerator = ({ showLauncher = true, openSettingsSignal }: MusicGenera
 
   const buildPrompt = (s: StudyMusicSettings) => {
     const instruments = s.instruments.length > 0 ? `featuring ${s.instruments.join(' and ')}` : '';
-    return `A ${s.tempo.toLowerCase()} tempo, ${s.energy.toLowerCase()} energy, ${s.vibe.toLowerCase()} ${s.genre.toLowerCase()} track, ${instruments}.`;
+    return `Create a ${s.vibe.toLowerCase()} ${s.genre.toLowerCase()} song at a ${s.tempo.toLowerCase()} tempo with ${s.energy.toLowerCase()} energy, ${instruments}. This track must include sung vocals with clear, intelligible lyrics; do NOT generate instrumental-only audio. Begin vocals within the first bar and keep them mixed forward.`;
   };
 
   const handleGenerate = async (newSettings: StudyMusicSettings) => {

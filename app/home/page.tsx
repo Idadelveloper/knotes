@@ -255,7 +255,7 @@ export default function HomePage() {
                           </div>
                           <div className="min-w-0">
                             <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{s.title}</div>
-                            <div className="mt-1 inline-block text-xs px-2 py-1 rounded-full bg-[--color-accent]/80 dark:bg-white/10 ring-1 ring-black/5 dark:ring-white/10 text-slate-700 dark:text-slate-200">{new Date(s.openedAt).toLocaleString()}</div>
+                            <div className="mt-1 inline-block text-xs px-2 py-1 rounded-full bg-[--color-accent]/80 dark:bg-white/10 ring-1 ring-black/5 dark:ring-white/10 text-slate-700 dark:text-slate-500">{new Date(s.openedAt).toLocaleString()}</div>
                           </div>
                         </div>
                       </Link>
@@ -267,7 +267,7 @@ export default function HomePage() {
                           </div>
                           <div className="min-w-0">
                             <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{s.title}</div>
-                            <div className="mt-1 inline-block text-xs px-2 py-1 rounded-full bg-[--color-accent]/80 dark:bg-white/10 ring-1 ring-black/5 dark:ring-white/10 text-slate-700 dark:text-slate-200">{new Date(s.openedAt).toLocaleString()}</div>
+                            <div className="mt-1 inline-block text-xs px-2 py-1 rounded-full bg-[--color-accent]/80 dark:bg-white/10 ring-1 ring-black/5 dark:ring-white/10 text-slate-700 dark:text-slate-500">{new Date(s.openedAt).toLocaleString()}</div>
                           </div>
                         </div>
                       </div>
@@ -302,7 +302,7 @@ export default function HomePage() {
                           </div>
                           <div className="min-w-0">
                             <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{t.title}</div>
-                            <div className="mt-1 inline-block text-xs px-2 py-1 rounded-full bg-[--color-accent]/80 dark:bg-white/10 ring-1 ring-black/5 dark:ring-white/10 text-slate-700 dark:text-slate-200">{new Date(t.playedAt).toLocaleString()}</div>
+                            <div className="mt-1 inline-block text-xs px-2 py-1 rounded-full bg-[--color-accent]/80 dark:bg-white/10 ring-1 ring-black/5 dark:ring-white/10 text-slate-700 dark:text-slate-500">{new Date(t.playedAt).toLocaleString()}</div>
                           </div>
                         </div>
                       </Link>
@@ -314,7 +314,7 @@ export default function HomePage() {
                           </div>
                           <div className="min-w-0">
                             <div className="font-medium text-slate-900 dark:text-[--color-accent] line-clamp-1">{t.title}</div>
-                            <div className="mt-1 inline-block text-xs px-2 py-1 rounded-full bg-[--color-accent]/80 dark:bg-white/10 ring-1 ring-black/5 dark:ring-white/10 text-slate-700 dark:text-slate-200">{new Date(t.playedAt).toLocaleString()}</div>
+                            <div className="mt-1 inline-block text-xs px-2 py-1 rounded-full bg-[--color-accent]/80 dark:bg-white/10 ring-1 ring-black/5 dark:ring-white/10 text-slate-700 dark:text-slate-500">{new Date(t.playedAt).toLocaleString()}</div>
                           </div>
                         </div>
                       </div>

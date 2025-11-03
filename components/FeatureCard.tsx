@@ -15,7 +15,7 @@ export default function FeatureCard({ icon, title, description }: FeatureCardPro
         {icon}
       </div>
       <h3 className="text-lg font-semibold text-slate-900 dark:text-[--color-accent]">{title}</h3>
-      <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{description}</p>
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-500">{description}</p>
       {/* Soft glow on hover */}
       <div className="pointer-events-none absolute inset-0 -z-10 rounded-3xl opacity-0 transition-opacity duration-300 group-hover:opacity-100" style={{
         background:'color(display-p3 0.86 0.892 0.905 / 0.18)',

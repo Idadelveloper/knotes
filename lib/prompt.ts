@@ -108,7 +108,7 @@ export async function promptWithNotes(notes: string, userQuery: string, opts?: P
     }
   }
 
-  // Fallback to Gemini (cloud via Firebase AI Logic)
+  // Fallback to Gemini
   const model = getGeminiModel();
   const prompt = `You are Knotes Study Assistant. Use the student's notes below as primary context.\n\nNotes:\n"""\n${trimmedNotes}\n"""\n\nQuestion:\n${trimmedQuery}\n\nAnswer clearly and concisely. If something isn't present in the notes, say so and add helpful context.`;
   const res = await model.generateContent(prompt);

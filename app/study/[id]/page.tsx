@@ -679,6 +679,8 @@ export default function StudyWorkspace() {
   const [voiceDownloadUrl, setVoiceDownloadUrl] = useState<string | undefined>(undefined);
   const [playerOpen, setPlayerOpen] = useState<boolean>(false);
   const [playerState, setPlayerState] = useState<"playing" | "paused" | "stopped">("stopped");
+  const [voiceProgress, setVoiceProgress] = useState<number>(0);
+  const [voiceProgressMsg, setVoiceProgressMsg] = useState<string>("");
 
   const playInPlayer = (audioUrl: string, title: string) => {
     setVoiceAudioUrl(audioUrl);
@@ -703,32 +705,41 @@ export default function StudyWorkspace() {
 
   const startVoiceRead = async () => {
     const sid = typeof window !== 'undefined' ? sessionStorage.getItem('knotes_current_session_id') : null;
-    const title = typeof window !== 'undefined' ? (sessionStorage.getItem('knotes_title') || 'Study Notes') : 'Study Notes';
     const rawText = getEditorPlainText();
     if (!rawText) { pushToast('⚠️ Nothing to read'); return; }
 
     try {
       setVoiceError("");
       setVoiceGenerating(true);
+      setVoiceProgress(5);
+      setVoiceProgressMsg("Preparing notes…");
 
       // 1) If we already have a saved audio track for this session, reuse it
       const { findTrackBySession, addTrack } = await import('@/lib/storage/music');
       const existing = sid ? findTrackBySession(sid, 'lyrics') : null;
       if (existing && existing.audioUrl) {
+        setVoiceProgress(95);
+        setVoiceProgressMsg("Loading saved audio…");
         setVoiceTranscript(existing.lyrics || "");
         const playUrl = await toBlobUrl(existing.audioUrl);
         setVoiceDownloadUrl(existing.audioUrl);
-        if (playUrl) playInPlayer(playUrl, existing.title || title);
+        if (playUrl) playInPlayer(playUrl, existing.title || notesTitle);
         setTtsSpeaking(false);
+        setVoiceProgress(100);
+        setVoiceProgressMsg("Ready");
         return;
       }
 
       // 2) Build an audio-friendly transcript (rewrite to filter out non-topic details)
       const { buildAudioTranscriptPrompt, generateTTS } = await import('@/lib/tts');
+      setVoiceProgress(15);
+      setVoiceProgressMsg("Analyzing notes…");
       const prompt = buildAudioTranscriptPrompt(rawText);
       // We can reuse our general Gemini model to create the transcript text first
       const { getGeminiModel } = await import('@/lib/ai');
       const model = getGeminiModel('gemini-2.0-flash');
+      setVoiceProgress(25);
+      setVoiceProgressMsg("Building transcript…");
       const transcriptRes = await model.generateContent(prompt);
       let transcript = (transcriptRes?.response?.text?.() as string)?.trim() || '';
       // If transcript seems empty or too short to be useful, fall back to original notes text
@@ -741,6 +752,8 @@ export default function StudyWorkspace() {
         const encoder = new TextEncoder();
         const bytesLen = encoder.encode(transcript).length;
         if (bytesLen > 4000) {
+          setVoiceProgress(35);
+          setVoiceProgressMsg("Condensing transcript…");
           const { summarizeText } = await import('@/lib/summarize');
           // First pass: medium TL;DR, plain text
           let reduced = (await summarizeText(transcript, {
@@ -752,6 +765,7 @@ export default function StudyWorkspace() {
           })).text || transcript;
           // Second pass if still too large: short TL;DR
           if (encoder.encode(reduced).length > 4000) {
+            setVoiceProgress(45);
             reduced = (await summarizeText(reduced, {
               type: 'tldr',
               format: 'plain-text',
@@ -776,6 +790,8 @@ export default function StudyWorkspace() {
       }
 
       setVoiceTranscript(transcript);
+      setVoiceProgress(60);
+      setVoiceProgressMsg("Generating audio…");
 
       // 3) Send transcript to TTS model
       const tts = await generateTTS(transcript, { voiceName: 'Kore' });
@@ -784,7 +800,7 @@ export default function StudyWorkspace() {
       const downloadUrl = tts.dataUrl;
 
       // 4) Save as a lyrics Track so it appears in Music and is downloadable
-      const trackTitle = title; // Name audio same as the session title
+      const trackTitle = notesTitle; // Name audio same as the session title
       const track = addTrack({
         id: sid ? `aud_${sid}` : undefined,
         title: trackTitle,
@@ -796,8 +812,12 @@ export default function StudyWorkspace() {
       // Persisted via addTrack; ensure index updated
 
       setVoiceDownloadUrl(downloadUrl);
+      setVoiceProgress(90);
+      setVoiceProgressMsg("Finalizing…");
       playInPlayer(playUrl, trackTitle);
       setTtsSpeaking(false);
+      setVoiceProgress(100);
+      setVoiceProgressMsg("Ready");
     } catch (e: any) {
       console.warn('[VoiceRead] Failed:', e);
       setVoiceError(e?.message || 'Failed to generate audio');
@@ -1373,17 +1393,28 @@ export default function StudyWorkspace() {
                       {voiceError && (
                         <div className="mt-2 text-sm text-red-600">{voiceError}</div>
                       )}
+                      {voiceGenerating && (
+                        <div className="mt-3 rounded-xl bg-white/80 dark:bg-white/5 p-3 ring-1 ring-black/10 dark:ring-white/10">
+                          <div className="flex items-center justify-between mb-2 text-sm">
+                            <span className="text-slate-700 dark:text-slate-300" aria-live="polite">{voiceProgressMsg || 'Working…'}</span>
+                            <span className="font-medium text-slate-900 dark:text-[--color-accent]">{Math.max(0, Math.min(100, Math.round(voiceProgress)))}%</span>
+                          </div>
+                          <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.max(0, Math.min(100, Math.round(voiceProgress)))}>
+                            <div className="h-full bg-primary transition-all duration-200" style={{ width: `${Math.max(0, Math.min(100, Math.round(voiceProgress)))}%` }} />
+                          </div>
+                        </div>
+                      )}
                       <div className="mt-3 flex items-center gap-2">
                         <button className="rounded-full bg-primary px-4 py-2 text-slate-900 disabled:opacity-50" onClick={startVoiceRead} disabled={voiceGenerating}>
                           {voiceGenerating ? 'Generating…' : (voiceAudioUrl ? 'Play Audio' : 'Start Reading')}
                         </button>
                         {voiceAudioUrl && (
-                          <button className="rounded-full bg-white ring-1 ring-black/10 px-4 py-2 text-slate-800" onClick={() => playInPlayer(voiceAudioUrl!, (typeof window !== 'undefined' ? (sessionStorage.getItem('knotes_title') || 'Study Notes') : 'Study Notes'))}>
+                          <button className="rounded-full bg-white ring-1 ring-black/10 px-4 py-2 text-slate-800" onClick={() => playInPlayer(voiceAudioUrl!, notesTitle)}>
                             Play Again
                           </button>
                         )}
                         {(voiceDownloadUrl || voiceAudioUrl) && (
-                          <a className="rounded-full bg-white ring-1 ring-black/10 px-4 py-2 text-slate-800" href={(voiceDownloadUrl || voiceAudioUrl)!} download={(typeof window !== 'undefined' ? (sessionStorage.getItem('knotes_title') || 'audio') : 'audio') + ((voiceDownloadUrl || voiceAudioUrl)?.startsWith('data:audio/mpeg') ? '.mp3' : '.wav')}>
+                          <a className="rounded-full bg-white ring-1 ring-black/10 px-4 py-2 text-slate-800" href={(voiceDownloadUrl || voiceAudioUrl)!} download={`${notesTitle.replace(/[^a-z0-9-_ ]/gi,'_')}${(voiceDownloadUrl || voiceAudioUrl)?.startsWith('data:audio/mpeg') ? '.mp3' : '.wav'}`}>
                             Download Audio
                           </a>
                         )}
@@ -1403,7 +1434,7 @@ export default function StudyWorkspace() {
         <div className="fixed bottom-0 left-0 right-0 z-40">
           <div className="mx-auto w-full max-w-5xl px-3 pb-2">
             <MusicPlayer
-              trackTitle={(typeof window !== 'undefined' ? (sessionStorage.getItem('knotes_title') || 'Audio Notes') : 'Audio Notes')}
+              trackTitle={notesTitle}
               playbackState={playerState as any}
               isGenerating={voiceGenerating}
               audioUrl={voiceAudioUrl}
@@ -1417,7 +1448,7 @@ export default function StudyWorkspace() {
                   if (!url) return;
                   const a = document.createElement('a');
                   a.href = url;
-                  a.download = ((typeof window !== 'undefined' ? (sessionStorage.getItem('knotes_title') || 'audio') : 'audio') + (url?.startsWith('data:audio/mpeg') ? '.mp3' : '.wav'));
+                  a.download = `${notesTitle.replace(/[^a-z0-9-_ ]/gi,'_')}${url?.startsWith('data:audio/mpeg') ? '.mp3' : '.wav'}`;
                   document.body.appendChild(a);
                   a.click();
                   a.remove();
@@ -1547,7 +1578,7 @@ export default function StudyWorkspace() {
                 <HiOutlineX size={18} />
               </button>
             </div>
-            <div className="px-5 py-4 space-y-4 text-slate-800 dark:text-slate-200">
+            <div className="px-5 py-4 space-y-4 text-slate-800 dark:text-slate-500">
               <div className="flex gap-2">
                 <button
                   className={`flex-1 rounded-lg px-3 py-2 ring-1 ${timerMode === 'pomodoro' ? 'bg-primary text-slate-900 ring-primary/50' : 'bg-white/70 dark:bg-white/5 ring-black/10 dark:ring-white/10'}`}
@@ -1749,7 +1780,7 @@ function Panel({ title, open, onToggle, onCopy, children }: {
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
-      className={`px-3 py-1 rounded-full text-sm ${active ? "bg-primary text-slate-900" : "text-slate-700 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-white/10"}`}
+      className={`px-3 py-1 rounded-full text-sm ${active ? "bg-primary text-slate-900" : "text-slate-700 dark:text-slate-500 hover:bg-white/60 dark:hover:bg-white/10"}`}
       onClick={onClick}
     >
       {children}
