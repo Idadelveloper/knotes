@@ -105,7 +105,7 @@ export async function generateLyricsFromNotes(params: {
     const sanitized = await sanitizeLyrics(cleaned);
     return sanitized.text;
   } catch (e) {
-    // Minimal fallback – return empty (instrumental)
+    // On failure, return empty to force caller to handle and avoid accidental instrumental output
     return '';
   }
 }
@@ -142,6 +142,8 @@ export function buildMusicPromptFromControls(params: {
   keywordEmphasis?: boolean;
   autoChorusBuilder?: boolean;
   backgroundChants?: boolean;
+  // Retry/LLM hint
+  extraHint?: string;
 }): string {
   const { notes, lyrics, genre, mood, tempoBpm, energy, instruments = [], singer, forceInstrumental, lyricStyle, durationSec, manualTopics } = params;
 
@@ -172,7 +174,7 @@ export function buildMusicPromptFromControls(params: {
 
   // Strongly request sung vocals and structural timing per Eleven Music guide
   parts.push('This track must include sung vocals using the provided lyrics; do NOT generate instrumental-only audio.');
-  parts.push('Lyrics begin at 0 seconds (optionally after a very short 1–2 bar intro). Ensure the vocals are clearly sung, on pitch, and mixed forward.');
+  parts.push('Lyrics begin at 0 seconds; do not include an instrumental intro. Ensure the vocals are clearly sung, on pitch, and mixed forward.');
 
   // Multi-vocal directives
   const singerLower = (singer || '').toLowerCase();
@@ -211,15 +213,26 @@ export function buildMusicPromptFromControls(params: {
   const hint = genreHints[g];
   if (hint) parts.push(`Style hints: ${hint}`);
 
+  // Some genres (lo-fi/ambient/chillhop) are often instrumental; reiterate vocals are required
+  const vocalCautionGenres = ['lo-fi', 'lofi', 'lo fi', 'ambient', 'chillhop', 'chill hop'];
+  if (vocalCautionGenres.includes(g)) {
+    parts.push('Despite this genre often being instrumental, this track MUST include sung vocals using the provided lyrics. No instrumental-only output.');
+  }
+
+  if (params.extraHint) parts.push(String(params.extraHint));
+
   // if (forceInstrumental) {
   //     parts.push('Keep it strictly instrumental without vocals.');
   // }
   if (lyrics && lyrics.trim()) {
-    parts.push('Generate a song with vocals using the provided lyrics. Sing the exact lines (allowing only minor musical repetitions like hooks/ad-libs). Do not invent new lines.');
+    parts.push('Generate a song with vocals using the provided lyrics. MUST sing these exact lines (minor musical repetitions like hooks/ad-libs are allowed). Do not invent, omit, or reorder lines.');
     if (lyricStyle) parts.push(`Lyric style: ${lyricStyle}.`);
     parts.push(`Vocal timbre/voice style: ${singer}.`);
-    parts.push('Provided lyrics:');
+    parts.push('BEGIN LYRICS');
     parts.push(lyrics.trim());
+    parts.push('END LYRICS');
+    // Reiterate the requirement after the lyrics block in case the model skims
+    parts.push('MANDATORY: Include sung vocals using the above lyrics. Instrumental-only output is forbidden.');
   } else {
     parts.push(`Include clear, melodic vocals. Vocal timbre/voice style: ${singer}.`);
   }
@@ -232,9 +245,59 @@ export function buildMusicPromptFromControls(params: {
   parts.push('Focus lyrical content and themes on the following key notes/topics:');
 
   // We will trim notes to fit within the max prompt size
-  const header = parts.join('\n') + '\n';
-  const remaining = Math.max(0, MAX_PROMPT - header.length - 1);
-  const notesTrimmed = notes.slice(0, Math.min(1800, remaining));
-  const final = header + notesTrimmed;
+  let header = parts.join('\n') + '\n';
+  let remaining = Math.max(0, MAX_PROMPT - header.length - 1);
+  let notesTrimmed = notes.slice(0, Math.min(1800, remaining));
+  let final = header + notesTrimmed;
+
+  // Ensure final prompt stays within MAX_PROMPT and prioritize keeping the LYRICS block intact
+  if (final.length > MAX_PROMPT) {
+    // Rebuild a minimal header that keeps only essential directives and the lyrics block
+    const beginIdx = parts.findIndex(l => l === 'BEGIN LYRICS');
+    const endIdx = parts.findIndex(l => l === 'END LYRICS');
+    const essentials: string[] = [];
+    // 1) Keep the first descriptive line if present
+    if (parts.length > 0) essentials.push(parts[0]);
+    // 2) Keep strong vocal directives
+    for (const p of parts) {
+      if (p.includes('must include sung vocals') || p.includes('Lyrics begin at 0 seconds')) {
+        if (!essentials.includes(p)) essentials.push(p);
+      }
+    }
+    // 3) Keep singer timbre line if present
+    for (const p of parts) {
+      if (p.startsWith('Vocal timbre/voice style:')) { essentials.push(p); break; }
+    }
+    // 4) Include lyrics block
+    if (beginIdx !== -1 && endIdx !== -1 && endIdx > beginIdx) {
+      essentials.push('BEGIN LYRICS');
+      const lyricsLines = parts.slice(beginIdx + 1, endIdx);
+      // We'll join lyrics later and possibly trim if still over the limit
+      const lyricsJoined = lyricsLines.join('\n');
+      // We'll temporarily push placeholder and add END after trimming
+      // 5) Add a couple of closing guidance lines
+      const tail: string[] = [];
+      for (const p of parts) {
+        if (p.startsWith('Do not reference specific artists')) { tail.push(p); break; }
+      }
+      // Now assemble minimal with full lyrics, then trim if needed
+      const minimalHead = [...essentials].join('\n') + '\n';
+      let minimal = minimalHead + lyricsJoined + '\nEND LYRICS' + (tail.length ? '\n' + tail.join('\n') : '');
+      if (minimal.length > MAX_PROMPT) {
+        // Need to trim lyrics content to fit; keep the start to preserve sections/chorus hooks
+        const budget = MAX_PROMPT - (minimalHead.length + '\nEND LYRICS'.length + (tail.length ? ('\n' + tail.join('\n')).length : 0)) - 1;
+        const safeBudget = Math.max(0, budget);
+        const trimmedLyrics = lyricsJoined.slice(0, safeBudget);
+        minimal = minimalHead + trimmedLyrics + '\nEND LYRICS' + (tail.length ? '\n' + tail.join('\n') : '');
+      }
+      header = minimal + '\n';
+      notesTrimmed = '';
+      final = header;
+    } else {
+      // No explicit lyrics markers found (should not happen if lyrics provided); fall back to dropping notes entirely
+      final = header.slice(0, MAX_PROMPT);
+    }
+  }
+
   return final;
 }

@@ -46,6 +46,7 @@ export async function composeSongDetailed(opts: ElevenComposeOptions): Promise<E
     forceInstrumental = false,
     outputFormat = "mp3_44100_128",
   } = opts;
+    console.log(prompt)
 
   try {
     const resp: any = await client.music.composeDetailed({
