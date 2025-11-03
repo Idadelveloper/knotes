@@ -1346,7 +1346,7 @@ export default function StudyWorkspace() {
                 <HiOutlineX size={18} />
               </button>
             </div>
-            <div className="px-5 py-4 space-y-4 text-slate-800 dark:text-slate-200">
+            <div className="px-5 py-4 space-y-4 text-slate-800 dark:text-slate-500">
               <div className="flex gap-2">
                 <button
                   className={`flex-1 rounded-lg px-3 py-2 ring-1 ${timerMode === 'pomodoro' ? 'bg-primary text-slate-900 ring-primary/50' : 'bg-white/70 dark:bg-white/5 ring-black/10 dark:ring-white/10'}`}
@@ -1548,7 +1548,7 @@ function Panel({ title, open, onToggle, onCopy, children }: {
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
-      className={`px-3 py-1 rounded-full text-sm ${active ? "bg-primary text-slate-900" : "text-slate-700 dark:text-slate-200 hover:bg-white/60 dark:hover:bg:white/10"}`}
+      className={`px-3 py-1 rounded-full text-sm ${active ? "bg-primary text-slate-900" : "text-slate-700 dark:text-slate-500 hover:bg-white/60 dark:hover:bg:white/10"}`}
       onClick={onClick}
     >
       {children}
