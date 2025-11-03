@@ -9,8 +9,6 @@ export type SynthesizeOptions = {
   languageCode?: string; // e.g., "en-US"
   voiceName?: string; // e.g., "Charon", "Callirrhoe", etc.
   outputFormat?: TtsEncoding; // default MP3
-  // Note: sampleRateHertz is currently ignored by the backend because Gemini TTS does not accept it in speechConfig.
-  // Models typically output 24 kHz; we return audio/wav without resampling.
   sampleRateHertz?: number; // e.g., 24000 (ignored)
 };
 

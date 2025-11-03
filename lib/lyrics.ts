@@ -178,7 +178,7 @@ export function buildMusicPromptFromControls(params: {
   const singerLower = (singer || '').toLowerCase();
   if (singerLower.includes('duet')) {
     const duoLabel = params.vocalType ? `two ${params.vocalType.toLowerCase()} singers` : 'two singers';
-    parts.push(`Arrange as a duet: ${duoLabel} alternate lines in the verses and harmonize together in the choruses. Use call-and-response phrasing and tight harmonies.`);
+    parts.push(`Arrange as a duet: ${duoLabel} alternate lines in the verses and harmonize together in the choruses.Use different voices for each. Use call-and-response phrasing and tight harmonies.`);
     parts.push('Explicitly render TWO distinct vocal timbres so the duet is obvious.');
   } else if (singerLower.includes('choir') || singerLower.includes('group')) {
     const layers = typeof params.layeredVocals === 'number' ? Math.max(3, params.layeredVocals) : 4;
@@ -211,9 +211,10 @@ export function buildMusicPromptFromControls(params: {
   const hint = genreHints[g];
   if (hint) parts.push(`Style hints: ${hint}`);
 
-  if (forceInstrumental) {
-    parts.push('Keep it strictly instrumental without vocals.');
-  } else if (lyrics && lyrics.trim()) {
+  // if (forceInstrumental) {
+  //     parts.push('Keep it strictly instrumental without vocals.');
+  // }
+  if (lyrics && lyrics.trim()) {
     parts.push('Generate a song with vocals using the provided lyrics. Sing the exact lines (allowing only minor musical repetitions like hooks/ad-libs). Do not invent new lines.');
     if (lyricStyle) parts.push(`Lyric style: ${lyricStyle}.`);
     parts.push(`Vocal timbre/voice style: ${singer}.`);

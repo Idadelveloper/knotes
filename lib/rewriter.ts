@@ -1,12 +1,6 @@
-// Chrome Rewriter API integration with graceful fallbacks to Firebase AI Logic (Gemini)
-// Client-side only utilities
-
 'use client';
 
 import { getGeminiModel } from './ai';
-
-// Types are not available globally; use any for Rewriter to avoid TS errors in SSR/build
-// We’ll guard all calls with typeof window !== 'undefined'
 
 type RewriteOptions = {
   sharedContext?: string;
@@ -31,8 +25,7 @@ export async function isRewriterAvailable() {
 }
 
 export async function rewriteText(input: string, options?: RewriteOptions): Promise<{ text: string; used: 'rewriter' | 'gemini' }> {
-  const context = options?.sharedContext ?? 'Restructure these study notes into clean, well-organized Markdown suitable for studying. Use clear headings (##, ###), bullet/numbered lists, and tables when needed. Math is already rendered using KaTex. For diagrams/flows, include Mermaid fenced code blocks (```mermaid ... ```). Keep original meaning. Return ONLY the Markdown, no extra commentary. Ditch the markdown/text (\`\`\`markdown or \`\`\`text) opening and closing tags wrapping the entire output and return ONLY the Markdown.';
-  // Try Chrome Rewriter first
+  const context = options?.sharedContext ?? 'Restructure these study notes into clean, well-organized Markdown suitable for studying. Use clear headings (##, ###), bullet/numbered lists, and tables when needed. Math is already rendered using KaTex. For diagrams/flows, include Mermaid fenced code blocks (```mermaid ... ```). Keep original meaning. Return ONLY the Markdown, no extra commentary. Ditch the markdown/text (\`\`\`markdown or \`\`\`text) opening and closing backticks wrapping the entire output and return ONLY the Markdown formatted text.';
   if (await isRewriterAvailable()) {
     try {
       const g: any = window as any;
@@ -72,7 +65,7 @@ export async function rewriteText(input: string, options?: RewriteOptions): Prom
 }
 
 export async function generateTitle(input: string): Promise<{ title: string; used: 'rewriter' | 'gemini' | 'heuristic' }>{
-  // Try Rewriter to create a concise title
+  // Rewriter to create a concise title
   if (await isRewriterAvailable()) {
     try {
       const g: any = window as any;

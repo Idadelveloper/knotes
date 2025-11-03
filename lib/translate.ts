@@ -1,7 +1,5 @@
 'use client';
 
-// Chrome Translator API integration with graceful fallback to Firebase AI Logic (Gemini)
-// Client-side only utilities
 
 import { getGeminiModel } from './ai';
 
@@ -88,7 +86,7 @@ export async function translateText(input: string, targetLanguage: string, opts:
 
   // Fallback: Gemini model
   const model = getGeminiModel();
-  const prompt = `Translate the following text to ${targetLanguage}. Preserve meaning and key terms. Return only the translation.\n\nText:\n"""\n${input}\n"""`;
+  const prompt = `Translate the following text to ${targetLanguage} and return the result in markdown format. Preserve meaning and key terms. Return only the translation.\n\nText:\n"""\n${input}\n"""`;
   const res = await model.generateContent(prompt);
   const txt = res?.response?.text?.() ?? '';
   return {

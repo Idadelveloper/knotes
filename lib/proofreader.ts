@@ -63,10 +63,10 @@ export interface ProofreadResult {
   used: 'proofreader' | 'fallback';
 }
 
-// Simple profanity masker fallback: masks inner characters of listed words (case-insensitive)
+// Simple profanity masker fallback: masks inner characters of listed words
 const DEFAULT_PROFANITY = [
   // broad but not exhaustive; minimal for safety without being overzealous
-  'fuck','shit','bitch','asshole','bastard','dick','pussy','cunt','slut','whore','niga','nigger','retard','faggot','damn','crap',
+  'fuck','shit','bitch','asshole','bastard','dick','pussy','cunt','slut','whore','niga','nigger','retard', 'nigga', 'faggot','damn','crap',
 ];
 
 function maskWord(word: string): string {
@@ -90,7 +90,6 @@ export async function proofreadText(input: string): Promise<ProofreadResult> {
       const pr = await createProofreader({ expectedInputLanguages: ['en'] });
       if (pr) {
         const out = await pr.proofread(String(input || ''));
-        // out has .correction (string) and .corrections (array)
         const corrected: string = String(out?.correction ?? out?.corrected ?? input ?? '');
         const corrections = Array.isArray(out?.corrections) ? out.corrections : undefined;
         pr.destroy?.();

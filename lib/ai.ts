@@ -58,9 +58,8 @@ function getDirectModel(modelName: string) {
   } as const;
 }
 
-// Default cloud model to use when falling back (can be overridden)
+// Default cloud model to use when falling back
 export function getGeminiModel(modelName: string = "gemini-2.0-flash-lite") {
-  // Re-create if model name changes
   if (!model || cachedName !== modelName) {
     const direct = getDirectModel(modelName);
     if (direct) {
@@ -336,13 +335,11 @@ export async function extractTextFromFile(file: File, promptOverride?: string) {
 - Use Markdown tables when tabular data is present.
 - Include code blocks only when truly code.
 - Avoid extra commentary; return ONLY the Markdown and do not.
-- Ditch the markdown/text (\`\`\`markdown or \`\`\`text) opening and closing tags wrapping the entire output and return ONLY the Markdown.
+- Ditch the markdown/text opening and closing backticks.
 `;
 
   const result = await model.generateContent([prompt, part as any]);
-  // Prefer response.text(), but add a safety fallback
   const text = result?.response?.text?.() ?? "";
-  // Debug: log Gemini extraction result and file info
   try {
     console.log("[Gemini] Extraction result for", { name: file.name, type: file.type, size: file.size }, "\n--- BEGIN TEXT ---\n" + (text || "") + "\n--- END TEXT ---");
   } catch {}

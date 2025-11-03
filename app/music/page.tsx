@@ -65,7 +65,6 @@ export default function MusicPage() {
     try {
       const p = createPlaylist(name.trim());
       setPlaylists(listPlaylists());
-      // Let authUser pick songs to add now
       setAddTracksPlaylistId(p.id);
       setTrackSelection({});
       setAddTracksOpen(true);

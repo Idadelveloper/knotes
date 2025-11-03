@@ -24,7 +24,6 @@ export type ElevenComposeResult = {
 };
 
 function getApiKey(): string | undefined {
-  // Per issue, key is public for this prototype
   return process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY;
 }
 
@@ -66,7 +65,6 @@ export async function composeSongDetailed(opts: ElevenComposeOptions): Promise<E
     const url = URL.createObjectURL(blob);
     return { blobUrl: url, filename, metadata: json, used: "prompt" };
   } catch (err: any) {
-    // Try to surface prompt suggestions for bad_prompt
     const detail = (err && (err.body?.detail || err.response?.data?.detail)) as any;
     if (detail?.status === "bad_prompt") {
       const suggestion = detail?.data?.prompt_suggestion;

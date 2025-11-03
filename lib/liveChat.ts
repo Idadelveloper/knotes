@@ -76,7 +76,6 @@ export class LiveChatManager {
 
 export async function isLiveAvailable(): Promise<boolean> {
   try {
-    // Basic feature presence check; actual connection may still fail if project not enabled
     return true;
   } catch {
     return false;
