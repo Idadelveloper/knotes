@@ -43,7 +43,7 @@ export default function Landing() {
          
         </div><a
          className="inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium text-slate-900 dark:text-[--color-accent] hover:underline focus:outline-none focus-visible:underline transition"
-          href="/login"
+          href="/create-account"
          >
             Get Started
           </a>
@@ -57,17 +57,17 @@ export default function Landing() {
          
             icon={<FaBrain fill="rgb(34, 73, 113)" size={24} />}
             title="AI Assistance"
-            description="Simply upload your documents, lecture notes, or text books."
+            description="Explain, summarize, translate, or rewrite any passage from your notes — instantly."
           />
           <FeatureCard
             icon={<FaMusic fill="rgb(34, 73, 113) " size={24} />}
             title="Focus Music"
-            description="Lo-fi, clasical, and ambient tracks to boost concentration."
+            description="Generate personalized lo-fi, classical, and ambient tracks from your notes to boost focus."
           />
           <FeatureCard
             icon={<FaRobot fill="rgb(34, 73, 113)"  size={24} />}
             title="Smart Features"
-            description="Voice reader, music generation, and Pomodoro timer"
+            description="Quizzes, text‑to‑speech reader, music generation, Pomodoro timer, and Focus Mode."
           />
         </div>
       </section>
