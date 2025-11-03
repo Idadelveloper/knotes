@@ -6,6 +6,7 @@ import { getGeminiModel } from "@/lib/ai";
 import { incStat } from "@/lib/stats";
 import { HiOutlineX } from "react-icons/hi";
 import { getSession } from "@/lib/storage/sessions";
+import { stripWrappingCodeFence } from "@/lib/utils/markdown";
 import { useRequireAuth } from "@/components/useRequireAuth";
 
 // Lightweight types for the quiz

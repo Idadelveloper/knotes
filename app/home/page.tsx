@@ -10,6 +10,7 @@ import { rewriteText, generateTitle } from "@/lib/rewriter";
 import { useRequireAuth } from "@/components/useRequireAuth";
 import { getStats, getRecentSessions, getRecentTracks, incStat, addRecentSession, type DashboardStats, type RecentSession, type RecentTrack } from "@/lib/stats";
 import { createSession } from "@/lib/storage/sessions";
+import { stripWrappingCodeFence } from "@/lib/utils/markdown";
 
 export default function HomePage() {
   // Require authentication; redirect to landing if signed out
@@ -217,7 +218,7 @@ export default function HomePage() {
             </div>
           </div>
           <p id="upload-help" className="mt-3 max-w-2xl text-sm sm:text-base text-slate-700 dark:text-slate-500">
-            Drag & drop a .txt, .pdf, or .docx file — or paste your notes. We’ll generate a personalized, focus-friendly soundtrack for your study session.
+            Drag & drop a .txt, .pdf file — or paste your notes. We’ll generate a personalized, focus-friendly soundtrack for your study session.
           </p>
         </section>
 

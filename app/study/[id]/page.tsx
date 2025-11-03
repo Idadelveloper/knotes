@@ -18,6 +18,7 @@ import MarkdownViewer from "@/components/MarkdownViewer";
 import MDEditor from "@uiw/react-md-editor";
 import { addRecentSession, addStudyMinutes } from "@/lib/stats";
 import { updateEditableText, getSession } from "@/lib/storage/sessions";
+import { stripWrappingCodeFence } from "@/lib/utils/markdown";
 
 // Simple toast system
 type Toast = { id: number; message: string };
@@ -35,8 +36,8 @@ export default function StudyWorkspace() {
       const sess = getSession(routeId);
       if (sess) {
         sessionStorage.setItem("knotes_current_session_id", sess.id);
-        sessionStorage.setItem("knotes_extracted_text", sess.originalText);
-        sessionStorage.setItem("knotes_structured_text", (sess.editableText || sess.structuredText || sess.originalText));
+        sessionStorage.setItem("knotes_extracted_text", stripWrappingCodeFence(sess.originalText));
+        sessionStorage.setItem("knotes_structured_text", stripWrappingCodeFence(sess.editableText || sess.structuredText || sess.originalText));
         sessionStorage.setItem("knotes_title", sess.title || "Study Notes");
       }
     } catch {}
@@ -221,8 +222,10 @@ export default function StudyWorkspace() {
     const structuredKey = "knotes_structured_text"; // Markdown when available
     const extractedKey = "knotes_extracted_text"; // Raw fallback
     const titleKey = "knotes_title";
-    const structured = typeof window !== "undefined" ? sessionStorage.getItem(structuredKey) : null;
-    const extracted = typeof window !== "undefined" ? sessionStorage.getItem(extractedKey) : null;
+    let structured = typeof window !== "undefined" ? sessionStorage.getItem(structuredKey) : null;
+    let extracted = typeof window !== "undefined" ? sessionStorage.getItem(extractedKey) : null;
+    if (structured) structured = stripWrappingCodeFence(structured);
+    if (extracted) extracted = stripWrappingCodeFence(extracted);
     const savedTitle = typeof window !== "undefined" ? sessionStorage.getItem(titleKey) : null;
 
     // Persistent storage (survives reloads)
@@ -278,8 +281,9 @@ export default function StudyWorkspace() {
       } catch {}
 
       if (persistedMd && persistedMd.trim()) {
-        setNotesMarkdown(persistedMd);
-        const html = mdToHtml(persistedMd);
+        const cleaned = stripWrappingCodeFence(persistedMd);
+        setNotesMarkdown(cleaned);
+        const html = mdToHtml(cleaned);
         setNotesContentHtml(html);
         const tmp = document.createElement('div');
         tmp.innerHTML = html;
@@ -1063,7 +1067,8 @@ export default function StudyWorkspace() {
                                 const sid = sessionStorage.getItem('knotes_current_session_id');
                                 if (!sid) return;
                                 const sess = getSession(sid);
-                                const md = (sess?.structuredText || sess?.originalText || notesMarkdown) as string;
+                                let md = (sess?.structuredText || sess?.originalText || notesMarkdown) as string;
+                                md = stripWrappingCodeFence(md);
                                 setNotesMarkdown(md);
                                 const html = mdToHtml(md);
                                 setNotesContentHtml(html);
@@ -1091,7 +1096,7 @@ export default function StudyWorkspace() {
                           className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-slate-900"
                           onClick={() => {
                             if (notesMarkdown) {
-                              const md = mdEditing;
+                              let md = stripWrappingCodeFence(mdEditing);
                               setNotesMarkdown(md);
                               const html = mdToHtml(md);
                               setNotesContentHtml(html);

@@ -10,7 +10,6 @@ export default function Landing() {
           className="absolute inset-0"
           style={{
             background:
-              // Top-left baby blue to lighter diagonal + Bottom-right light green to lighter towards blue
               "radial-gradient(50% 50% at 0% 0%, rgba(139,198,236,0.35) 0%, rgba(139,198,236,0.08) 55%, rgba(139,198,236,0.03) 100%), " +
               "radial-gradient(55% 55% at 100% 100%, rgba(179,255,171,0.35) 0%, rgba(179,255,171,0.08) 55%, rgba(179,255,171,0.02) 100%)",
           }}
@@ -36,7 +35,7 @@ export default function Landing() {
         >
           Where knowledge meets notes, in perfect harmony.
         </h1>
-        <p className="mt-4 max-w-2xl text-base sm:text-lg text-slate-700 dark:text-slate-300">
+        <p className="mt-4 max-w-2xl text-base sm:text-lg text-slate-700 dark:text-slate-500">
           A clever fusion of study notes and music notes. Get AI-powered explanations, focus music, and turn your learning into rhythm.
         </p>
         <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">

@@ -1,5 +1,6 @@
 // Local persistent storage for study sessions.
 // Stores original (immutable) and structured notes, plus an editable copy.
+import { stripWrappingCodeFence } from "@/lib/utils/markdown";
 
 export type StoredSession = {
   id: string;
@@ -40,7 +41,9 @@ export function saveSession(sess: StoredSession) {
 export function createSession(title: string, originalText: string, structuredText: string): StoredSession {
   const id = generateId();
   const createdAt = new Date().toISOString();
-  const sess: StoredSession = { id, title, createdAt, originalText, structuredText, editableText: structuredText };
+  const orig = stripWrappingCodeFence(originalText || "");
+  const struct = stripWrappingCodeFence(structuredText || "");
+  const sess: StoredSession = { id, title, createdAt, originalText: orig, structuredText: struct, editableText: struct };
   saveSession(sess);
   return sess;
 }
@@ -48,7 +51,7 @@ export function createSession(title: string, originalText: string, structuredTex
 export function updateEditableText(id: string, editableText: string) {
   const sess = getSession(id);
   if (!sess) return;
-  sess.editableText = editableText;
+  sess.editableText = stripWrappingCodeFence(editableText || "");
   saveSession(sess);
 }
 

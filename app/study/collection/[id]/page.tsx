@@ -8,6 +8,7 @@ import { getCollection, addSessionToCollection, removeSessionFromCollection } fr
 import { getSession, listSessions } from "@/lib/storage/sessions";
 import StudyWorkspace from "../../[id]/page"; // reuse the main study workspace which reads from sessionStorage
 import { useRequireAuth } from "@/components/useRequireAuth";
+import { stripWrappingCodeFence } from "@/lib/utils/markdown";
 
 export default function CollectionStudyPage() {
   const { user, loading } = useRequireAuth();
@@ -56,8 +57,8 @@ export default function CollectionStudyPage() {
       const sess = getSession(activeSessionId);
       if (sess) {
         sessionStorage.setItem("knotes_current_session_id", sess.id);
-        sessionStorage.setItem("knotes_extracted_text", sess.originalText);
-        sessionStorage.setItem("knotes_structured_text", (sess.editableText || sess.structuredText || sess.originalText));
+        sessionStorage.setItem("knotes_extracted_text", stripWrappingCodeFence(sess.originalText));
+        sessionStorage.setItem("knotes_structured_text", stripWrappingCodeFence(sess.editableText || sess.structuredText || sess.originalText));
         sessionStorage.setItem("knotes_title", sess.title || "Study Notes");
       }
     } catch {}
