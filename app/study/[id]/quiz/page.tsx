@@ -167,7 +167,8 @@ export default function QuizPage() {
       try {
         const notes = (sessionText || "").trim();
         if (!notes) throw new Error("No session notes found to generate the quiz.");
-        const model = getGeminiModel();
+
+        // Shared prompt used for both Writer-first and Gemini fallback
         const prompt = `You are a quiz generator. Create a 6-question mixed-format quiz to assess understanding of the main subject matter in the study notes provided below.
 Return STRICT JSON in this exact schema (no markdown, no commentary):\n{
   "title": string,
@@ -184,13 +185,35 @@ Guidelines:
 - Cover key definitions, reasoning, and application. Avoid trivial recall only.
 - Keep each question self-contained and unambiguous.
 Notes (may include non-content administrative headers—ignore those):\n---\n${notes}\n---`;
-        const res = await model.generateContent([{ text: prompt } as any]);
-        const text = res?.response?.text?.() || "";
+
+        let text = "";
+        let used: 'writer' | 'gemini' | null = null;
+
+        // 1) Try Writer API first
+        try {
+          const { writerWrite } = await import('@/lib/writer');
+          const writerOut = await writerWrite(prompt);
+          if (writerOut && String(writerOut).trim()) {
+            text = String(writerOut);
+            used = 'writer';
+          }
+        } catch {}
+
+        // 2) Fallback to Firebase AI logic / Gemini if Writer not used or empty
+        if (!text) {
+          const model = getGeminiModel();
+          const res = await model.generateContent([{ text: prompt } as any]);
+          text = (res?.response?.text?.() as string) || "";
+          used = 'gemini';
+        }
+
+        // Clean and parse JSON
         let data: Quiz | null = null;
         try {
-          data = JSON.parse(text);
+          const clean = stripWrappingCodeFence(text);
+          data = JSON.parse(clean || text);
         } catch {
-          // Try to extract JSON block if model added extra text
+          // Try to extract JSON block if model/writer added extra text
           const m = text.match(/\{[\s\S]*\}/);
           if (m) {
             try { data = JSON.parse(m[0]); } catch {}
