@@ -14,6 +14,11 @@ export const metadata: Metadata = {
   description:
     "Knotes helps students study smarter with focused reading, AI explanations, adaptive music, songs, and TTS — all in one tab.",
   manifest: "/manifest.webmanifest",
+  icons: {
+    apple: [
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
 };
 
 export default function RootLayout({
