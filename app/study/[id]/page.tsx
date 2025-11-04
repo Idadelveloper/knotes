@@ -53,6 +53,8 @@ export default function StudyWorkspace() {
   // Floating toolbar state
   const [toolbarVisible, setToolbarVisible] = useState(false);
   const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  // Require explicit user interaction inside the editor before showing any selection toolbar
+  const userInteractedInEditorRef = useRef<boolean>(false);
 
   // AI Modal state
   const [aiOpen, setAiOpen] = useState(false);
@@ -351,7 +353,15 @@ export default function StudyWorkspace() {
     };
     window.addEventListener("keydown", handleKey);
 
+    // Mark that the user has interacted with the editor so selection toolbars only appear after intent
+    const markInteracted = () => { userInteractedInEditorRef.current = true; };
+    editor.addEventListener('mousedown', markInteracted);
+    editor.addEventListener('keyup', markInteracted);
+
     const handleSelectionChange = () => {
+      // Do not show toolbars/popups unless there was an explicit user interaction in the editor
+      if (!userInteractedInEditorRef.current) return;
+
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) {
         setToolbarVisible(false);
@@ -382,6 +392,8 @@ export default function StudyWorkspace() {
     return () => {
       document.removeEventListener("selectionchange", handleSelectionChange);
       window.removeEventListener("keydown", handleKey);
+      editor.removeEventListener('mousedown', markInteracted);
+      editor.removeEventListener('keyup', markInteracted);
     };
   }, []);
 
