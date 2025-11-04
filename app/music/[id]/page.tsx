@@ -905,7 +905,7 @@ const [topicsLoading, setTopicsLoading] = useState<boolean>(false);
     const isReady = !!notes;
 
     return (
-        <main className="relative w-full min-h-screen pb-36">
+        <main className={`relative w-full min-h-screen ${audioUrl ? 'pb-36' : ''}`}>
             {/* Background gradient like landing */}
             <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
                 <div

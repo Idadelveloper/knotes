@@ -18,6 +18,7 @@ import MarkdownViewer from "@/components/MarkdownViewer";
 import MDEditor from "@uiw/react-md-editor";
 import { addRecentSession, addStudyMinutes } from "@/lib/stats";
 import { updateEditableText, getSession } from "@/lib/storage/sessions";
+import { stripWrappingCodeFence } from "@/lib/utils/markdown";
 
 // Simple toast system
 type Toast = { id: number; message: string };
@@ -35,8 +36,8 @@ export default function StudyWorkspace() {
       const sess = getSession(routeId);
       if (sess) {
         sessionStorage.setItem("knotes_current_session_id", sess.id);
-        sessionStorage.setItem("knotes_extracted_text", sess.originalText);
-        sessionStorage.setItem("knotes_structured_text", (sess.editableText || sess.structuredText || sess.originalText));
+        sessionStorage.setItem("knotes_extracted_text", stripWrappingCodeFence(sess.originalText));
+        sessionStorage.setItem("knotes_structured_text", stripWrappingCodeFence(sess.editableText || sess.structuredText || sess.originalText));
         sessionStorage.setItem("knotes_title", sess.title || "Study Notes");
       }
     } catch {}
@@ -221,8 +222,10 @@ export default function StudyWorkspace() {
     const structuredKey = "knotes_structured_text"; // Markdown when available
     const extractedKey = "knotes_extracted_text"; // Raw fallback
     const titleKey = "knotes_title";
-    const structured = typeof window !== "undefined" ? sessionStorage.getItem(structuredKey) : null;
-    const extracted = typeof window !== "undefined" ? sessionStorage.getItem(extractedKey) : null;
+    let structured = typeof window !== "undefined" ? sessionStorage.getItem(structuredKey) : null;
+    let extracted = typeof window !== "undefined" ? sessionStorage.getItem(extractedKey) : null;
+    if (structured) structured = stripWrappingCodeFence(structured);
+    if (extracted) extracted = stripWrappingCodeFence(extracted);
     const savedTitle = typeof window !== "undefined" ? sessionStorage.getItem(titleKey) : null;
 
     // Persistent storage (survives reloads)
@@ -278,8 +281,9 @@ export default function StudyWorkspace() {
       } catch {}
 
       if (persistedMd && persistedMd.trim()) {
-        setNotesMarkdown(persistedMd);
-        const html = mdToHtml(persistedMd);
+        const cleaned = stripWrappingCodeFence(persistedMd);
+        setNotesMarkdown(cleaned);
+        const html = mdToHtml(cleaned);
         setNotesContentHtml(html);
         const tmp = document.createElement('div');
         tmp.innerHTML = html;
@@ -660,7 +664,8 @@ export default function StudyWorkspace() {
         },
       });
 
-      setTranslateText(result.text || '(No translation generated)');
+      const cleaned = stripWrappingCodeFence(result.text || '');
+      setTranslateText(cleaned || '(No translation generated)');
       setTranslatorDownloading(false);
       setTranslatorProgress(null);
       try { console.log(`[Translate] Used: ${result.used} | ${result.sourceLanguage} → ${result.targetLanguage}`); } catch {}
@@ -869,7 +874,7 @@ export default function StudyWorkspace() {
   }, [notesTab]);
 
   return (
-    <main className="relative w-full min-h-screen pb-36">{/* padding bottom for dock */}
+    <main className={`relative w-full min-h-screen ${playerOpen ? 'pb-36' : ''}`}>{/* padding bottom for dock */}
       {/* Page background */}
       <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0" style={{
@@ -1063,7 +1068,8 @@ export default function StudyWorkspace() {
                                 const sid = sessionStorage.getItem('knotes_current_session_id');
                                 if (!sid) return;
                                 const sess = getSession(sid);
-                                const md = (sess?.structuredText || sess?.originalText || notesMarkdown) as string;
+                                let md = (sess?.structuredText || sess?.originalText || notesMarkdown) as string;
+                                md = stripWrappingCodeFence(md);
                                 setNotesMarkdown(md);
                                 const html = mdToHtml(md);
                                 setNotesContentHtml(html);
@@ -1091,7 +1097,7 @@ export default function StudyWorkspace() {
                           className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-slate-900"
                           onClick={() => {
                             if (notesMarkdown) {
-                              const md = mdEditing;
+                              let md = stripWrappingCodeFence(mdEditing);
                               setNotesMarkdown(md);
                               const html = mdToHtml(md);
                               setNotesContentHtml(html);
@@ -1396,7 +1402,7 @@ export default function StudyWorkspace() {
                       {voiceGenerating && (
                         <div className="mt-3 rounded-xl bg-white/80 dark:bg-white/5 p-3 ring-1 ring-black/10 dark:ring-white/10">
                           <div className="flex items-center justify-between mb-2 text-sm">
-                            <span className="text-slate-700 dark:text-slate-300" aria-live="polite">{voiceProgressMsg || 'Working…'}</span>
+                            <span className="text-slate-700 dark:text-slate-500" aria-live="polite">{voiceProgressMsg || 'Working…'}</span>
                             <span className="font-medium text-slate-900 dark:text-[--color-accent]">{Math.max(0, Math.min(100, Math.round(voiceProgress)))}%</span>
                           </div>
                           <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.max(0, Math.min(100, Math.round(voiceProgress)))}>
@@ -1478,7 +1484,6 @@ export default function StudyWorkspace() {
         userName={userDisplay}
         userAvatarUrl=""
         onSend={(text) => {
-          // Delegate to the prompt-powered handler that uses the authUser's notes as context
           sendChat(text);
         }}
         onMicStart={async () => {
@@ -1596,7 +1601,7 @@ export default function StudyWorkspace() {
 
               {timerMode === 'custom' && (
                 <div className="flex items-center gap-3">
-                  <label htmlFor="minutes" className="text-sm text-slate-600 dark:text-slate-300">Minutes</label>
+                  <label htmlFor="minutes" className="text-sm text-slate-600 dark:text-slate-500">Minutes</label>
                   <input
                     id="minutes"
                     type="number"
@@ -1609,7 +1614,7 @@ export default function StudyWorkspace() {
                 </div>
               )}
 
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+              <label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-500">
                 <input
                   type="checkbox"
                   checked={showCountdown}
@@ -1619,7 +1624,7 @@ export default function StudyWorkspace() {
               </label>
 
               <div className="flex items-center justify-between pt-2">
-                <div className="text-sm text-slate-600 dark:text-slate-300">
+                <div className="text-sm text-slate-600 dark:text-slate-500">
                   {isTimerRunning ? (
                     <>Remaining: <span className="font-semibold text-red-600">{formatTime(remainingSecs)}</span></>
                   ) : (
