@@ -10,7 +10,7 @@ import { useRouter, useParams } from "next/navigation";
 import MusicGenerator from "@/components/music/MusicGenerator";
 import MusicPlayer from "@/components/music/MusicPlayer";
 import { useRequireAuth } from "@/components/useRequireAuth";
-import { getGeminiModel } from "@/lib/ai";
+import { getGeminiModel, groundedSearch } from "@/lib/ai";
 import { translateText } from "@/lib/translate";
 import { summarizeText, isSummarizerAvailable } from "@/lib/summarize";
 import { promptWithNotes } from "@/lib/prompt";
@@ -144,7 +144,7 @@ export default function StudyWorkspace() {
 
   // Music dropdown + settings trigger
   const [musicMenuOpen, setMusicMenuOpen] = useState(false);
-  const [musicSettingsSignal, setMusicSettingsSignal] = useState(0);
+  const [musicSettingsSignal, setMusicSettingsSignal] = useState<number | null>(null);
 
   // Assistant panel output
   const [assistantOutput, setAssistantOutput] = useState<string>("");
@@ -526,13 +526,28 @@ export default function StudyWorkspace() {
     setAiOutput("We will turn your highlighted text into a mood-based soundtrack. (Demo)");
     setAiOpen(true);
   };
-  const handleSearch = () => {
+  const [grounding, setGrounding] = useState<any | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const handleSearch = async () => {
+    const text = (selectedText || '').trim();
+    if (!text) { pushToast('👆 Highlight some text first, then tap Search.'); return; }
     setToolbarVisible(false);
-    pushToast("🌐 Searching more info…");
-    const query = selectedText.length > 120 ? selectedText.slice(0, 120) + "…" : selectedText;
     setAiTab("summarize");
-    setAiOutput(`Top insights for: "${query}"\n\n• Definition overview\n• Related concepts\n• Further reading suggestions`);
     setAiOpen(true);
+    setSearchLoading(true);
+    setAiOutput('🌐 Searching with Google…');
+    try {
+      const { text: answer, grounding } = await groundedSearch(`Provide a concise, student-friendly explanation for: "${text}". Include definitions and key points. If relevant, include short examples. If there are recent facts, use Google Search to ensure accuracy and cite sources.`);
+      setAiOutput(answer || '(No answer)');
+      setGrounding(grounding || null);
+    } catch (e: any) {
+      console.error(e);
+      pushToast('⚠️ Search failed. Showing a best-effort answer.');
+      setAiOutput('Sorry, the search failed. Please try again.');
+      setGrounding(null);
+    } finally {
+      setSearchLoading(false);
+    }
   };
 
   const copyToNotes = (text: string) => {
@@ -953,7 +968,7 @@ export default function StudyWorkspace() {
                     <button
                       role="menuitem"
                       className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-100"
-                      onClick={() => { setMusicMenuOpen(false); setMusicSettingsSignal(s => s + 1); }}
+                      onClick={() => { setMusicMenuOpen(false); setMusicSettingsSignal(s => (s ?? 0) + 1); }}
                     >
                       Background music
                     </button>
@@ -1724,16 +1739,53 @@ export default function StudyWorkspace() {
                 <HiOutlineX size={18} />
               </button>
             </div>
-            <div className="px-6 py-5 max-h-[45vh] overflow-auto text-slate-900 dark:text-slate-100">
-              <p className="whitespace-pre-wrap leading-7">{aiOutput || "AI is ready. Choose a tab or run an action from the toolbar."}</p>
+            <div className="px-6 py-5 max-h-[45vh] overflow-auto text-slate-900 dark:text-slate-100 space-y-4">
+              <div className="prose prose-slate max-w-none">
+                <MarkdownViewer
+                  source={aiOutput || "AI is ready. Choose a tab or run an action from the toolbar."}
+                  className="prose prose-slate max-w-none"
+                  colorMode="light"
+                />
+              </div>
+              {/* Google Search suggestions widget (required to show when present) */}
+              {grounding?.searchEntryPoint?.renderedContent && (
+                <div aria-label="Google Search suggestions" className="rounded-xl overflow-hidden ring-1 ring-black/10 dark:ring-white/10">
+                  <div dangerouslySetInnerHTML={{ __html: grounding.searchEntryPoint.renderedContent }} />
+                </div>
+              )}
+              {/* Sources list (required when grounded) */}
+              {Array.isArray(grounding?.groundingChunks) && grounding.groundingChunks.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2">Sources</h4>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {grounding.groundingChunks.map((chunk: any, idx: number) => {
+                      const title = chunk?.web?.title || chunk?.title || `Source ${idx+1}`;
+                      const uri = chunk?.web?.uri || chunk?.uri;
+                      if (!uri) return null;
+                      return (
+                        <li key={idx}>
+                          <a className="text-blue-600 dark:text-blue-400 underline" href={uri} target="_blank" rel="noreferrer noopener">{title}</a>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
             </div>
-            <div className="px-6 pb-6">
+            <div className="px-6 pb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-secondary px-6 py-3 text-slate-900 font-medium shadow-[0_6px_0_rgba(0,0,0,0.08)] hover:shadow-[0_8px_0_rgba(0,0,0,0.1)] hover:brightness-105 active:translate-y-px"
                 title="Add this explanation directly into your notes."
                 onClick={() => insertIntoNotes("\n" + (aiOutput || "(No output)") + "\n")}
               >
                 <FaCopy /> Insert Back into Notes
+              </button>
+              <button
+                className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-white/80 dark:bg-white/10 ring-1 ring-black/10 dark:ring-white/10 px-6 py-3 text-slate-900 dark:text-[--color-accent] font-medium hover:bg-white/90"
+                title="Copy AI output to clipboard"
+                onClick={async () => { try { await navigator.clipboard.writeText(aiOutput || ""); pushToast("✅ Copied to clipboard"); } catch { pushToast("⚠️ Copy failed"); } }}
+              >
+                <FaCopy /> Copy
               </button>
             </div>
           </div>
@@ -1750,7 +1802,7 @@ export default function StudyWorkspace() {
       </div>
 
       {/* Music generator instance (hidden launcher). We trigger settings via dropdown signal. */}
-      <MusicGenerator showLauncher={false} openSettingsSignal={musicSettingsSignal} />
+      <MusicGenerator showLauncher={false} openSettingsSignal={musicSettingsSignal ?? undefined} />
     </main>
   );
 }

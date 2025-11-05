@@ -79,6 +79,41 @@ export function getGeminiModel(modelName: string = "gemini-2.0-flash-lite") {
   return model!;
 }
 
+// Grounded search via Google Search tool using Firebase AI Logic SDK
+export async function groundedSearch(prompt: string, opts?: { model?: string }) {
+  const modelName = opts?.model || "gemini-2.5-flash";
+  try {
+    const ai = getAI(app, { backend: new GoogleAIBackend() });
+    const m = getGenerativeModel(ai, {
+      inCloudParams: { model: modelName },
+      tools: [{ googleSearch: {} }],
+    } as any);
+
+    const result = await m.generateContent(prompt);
+    const response: any = await (result as any).response;
+
+    const text = typeof response.text === 'function' ? response.text() : (response.text || '');
+    const candidate = response.candidates?.[0];
+    const groundingMetadata = candidate?.groundingMetadata;
+
+    return {
+      text: text as string,
+      grounding: groundingMetadata || null,
+    } as { text: string; grounding: any | null };
+  } catch (e) {
+    // Fallback to direct model without grounding if configured
+    try {
+      const direct = getDirectModel(modelName);
+      if (direct) {
+        const res = await (direct as any).generateContent(prompt);
+        const text = await (res as any).response.text();
+        return { text, grounding: null };
+      }
+    } catch {}
+    throw e;
+  }
+}
+
 // Converts a File to a Generative Part that can be passed to generateContent
 export async function fileToGenerativePart(file: File) {
   const base64 = await new Promise<string>((resolve, reject) => {
