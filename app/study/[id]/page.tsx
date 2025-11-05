@@ -1017,7 +1017,7 @@ export default function StudyWorkspace() {
               </button>
               {musicMenuOpen && (
                 <div role="menu" className="absolute right-0 z-20 mt-2 w-48 rounded-lg bg-white shadow-lg ring-1 ring-black/10 overflow-hidden">
-                  <button role="menuitem" className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-100" onClick={() => { setMusicMenuOpen(false); setMusicSettingsSignal(s => s + 1); }}>
+                  <button role="menuitem" className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-100" onClick={() => { setMusicMenuOpen(false); setMusicSettingsSignal(s => (s ?? 0) + 1); }}>
                     Background music
                   </button>
                   <button role="menuitem" className="w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-100" onClick={() => { setMusicMenuOpen(false); try { const sid = sessionStorage.getItem('knotes_current_session_id'); router.push(sid ? `/music/${sid}` : '/library?intent=music'); } catch { router.push('/library?intent=music'); } }}>
