@@ -6,7 +6,7 @@ A Next.js app that turns your documents into clean Markdown study notes and help
 ## Features
 - Import PDF/TXT and convert to Markdown notes (headings, lists, tables, math)
 - Rewrite/retitle notes, summarize and translate content
-- Highlight toolbar: Explain, Read (TTS), Search
+- Highlight toolbar: Explain, Read (TTS), Google Search
 - Study assistant chat (text + optional audio)
 - Quiz generation and grading
 - Study music generation: instrumental or with vocals

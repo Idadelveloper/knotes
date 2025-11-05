@@ -2,8 +2,8 @@ const CACHE_NAME = "KNOTES_CACHE_V1";
 const CORE_ASSETS = [
   "/",
   "/offline",
-  "/icons/web-app-manifest-192x192.png",
-  "/icons/web-app-manifest-512x512.png",
+  "/icons//android-chrome-192x192.png",
+  "/icons//android-chrome-512x512.png",
 ];
 
 self.addEventListener("install", (event) => {

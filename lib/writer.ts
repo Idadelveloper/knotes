@@ -58,7 +58,7 @@ async function createWriter(opts?: WriterOptions, hooks?: { onDownloadStart?: ()
     tone: opts?.tone ?? 'neutral',
     format: opts?.format ?? 'plain-text',
     length: opts?.length ?? 'short',
-    sharedContext: opts?.sharedContext ?? 'Generate exactly one short, creative title for a study song with vocals. Strictly output only the title text on a single line. Do not include quotes, lists, numbering, or extra commentary. 2–6 words.',
+    sharedContext: opts?.sharedContext ?? '',
     expectedInputLanguages: opts?.expectedInputLanguages ?? ['en'],
     expectedContextLanguages: opts?.expectedContextLanguages ?? ['en'],
     outputLanguage: opts?.outputLanguage ?? 'en',
@@ -85,6 +85,22 @@ async function createWriter(opts?: WriterOptions, hooks?: { onDownloadStart?: ()
   return g.Writer.create(withMonitor());
 }
 
+export async function writerWrite(prompt: string, context?: string, options?: WriterOptions, hooks?: { onDownloadStart?: () => void; onDownloadProgress?: (loadedFraction: number) => void; }): Promise<string | null> {
+  try {
+    if (await isWriterUsable()) {
+      const writer = await createWriter(options, hooks);
+      if (writer) {
+        const out: string = await writer.write(prompt, context ? { context } : undefined);
+        writer.destroy?.();
+        return String(out ?? '');
+      }
+    }
+  } catch (e) {
+    console.warn('[Writer] writerWrite failed:', e);
+  }
+  return null;
+}
+
 export async function generateTrackName(params: GenerateTrackNameParams): Promise<{ title: string; used: 'writer' | 'firebase' | 'fallback'; }> {
   const { description, context, options, onDownloadProgress, onDownloadStart } = params;
   const input = description?.trim();
@@ -108,17 +124,15 @@ export async function generateTrackName(params: GenerateTrackNameParams): Promis
 
   // Try Writer API first
   try {
-    if (await isWriterUsable()) {
-      const writer = await createWriter(options, { onDownloadProgress, onDownloadStart });
-      if (writer) {
-        const out: string = await writer.write(
-          `Create a creative, evocative title for an instrumental background study track based on this description: ${input}`,
-          { context: ctx },
-        );
-        writer.destroy?.();
-        const cleaned = cleanTitle(out);
-        if (cleaned) return { title: cleaned, used: 'writer' };
-      }
+    const out = await writerWrite(
+      `Create a creative, evocative title for an instrumental background study track based on this description: ${input}`,
+      ctx,
+      options,
+      { onDownloadProgress, onDownloadStart }
+    );
+    if (out) {
+      const cleaned = cleanTitle(out);
+      if (cleaned) return { title: cleaned, used: 'writer' };
     }
   } catch (e) {
     console.warn('[Writer] generateTrackName failed, Writer unavailable or error:', e);
